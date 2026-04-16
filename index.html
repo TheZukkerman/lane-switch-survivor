@@ -18,8 +18,16 @@
           <strong id="time">0.0s</strong>
         </div>
         <div>
+          <span class="label">Score</span>
+          <strong id="score">0</strong>
+        </div>
+        <div>
+          <span class="label">Corruption</span>
+          <strong id="corrupt">SAFE</strong>
+        </div>
+        <div>
           <span class="label">Best</span>
-          <strong id="best">0.0s</strong>
+          <strong id="best">0.0s • 0</strong>
         </div>
       </header>
       <canvas id="game" width="360" height="640" aria-label="Lane-Switch Survivor" role="img"></canvas>
@@ -28,7 +36,7 @@
         <button id="restartBtn" type="button">Restart</button>
         <button id="rightBtn" type="button">Lane →</button>
       </section>
-      <p class="hint">Swipe or tap left/right side of the playfield to switch lanes.</p>
+      <p class="hint">Swipe or tap to switch lanes. Purple lanes are corrupted: dive in to build bonus, then get out before the corruption meter fills.</p>
     </main>
     <script src="game.js"></script>
   </body>
