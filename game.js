@@ -39,6 +39,7 @@ function resetGame() {
   spawnTimer = 0.6;
   runTime = 0;
   gameOver = false;
+  lastFrame = 0;
   timeEl.textContent = formatTime(0);
 }
 
@@ -195,8 +196,11 @@ window.addEventListener('keydown', (event) => {
 });
 
 canvas.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  canvas.setPointerCapture?.(event.pointerId);
   const bounds = canvas.getBoundingClientRect();
   const x = event.clientX - bounds.left;
+  touchStartX = event.clientX;
   if (gameOver) {
     resetGame();
     return;
@@ -206,20 +210,19 @@ canvas.addEventListener('pointerdown', (event) => {
 
 let touchStartX = null;
 canvas.addEventListener('pointermove', (event) => {
-  if (!event.buttons) return;
-  if (touchStartX === null) touchStartX = event.clientX;
+  if (touchStartX === null) return;
   const dx = event.clientX - touchStartX;
   if (Math.abs(dx) > 28) {
     moveLane(dx > 0 ? 1 : -1);
     touchStartX = event.clientX;
   }
 });
-canvas.addEventListener('pointerup', () => {
+canvas.addEventListener('pointerup', (event) => {
+  canvas.releasePointerCapture?.(event.pointerId);
   touchStartX = null;
 });
 canvas.addEventListener('pointercancel', () => {
   touchStartX = null;
 });
-
 resetGame();
 requestAnimationFrame(frame);
