@@ -1,6 +1,6 @@
 # Lane-Switch Survivor prototype
 
-Minimal first playable slice for testing if 3-lane dodge survival is fun.
+Current direction: a fixed 3-lane mastery game, not endless survival.
 
 ## Fastest mobile test strategy
 
@@ -86,13 +86,15 @@ Then open <http://localhost:4173>.
 - Swipe horizontally on the playfield
 - Restart button, or Space after game over
 
-## Iteration 3, tempo + readability pass
+## Current build, first fixed level
 
-- tempo ramps harder over the run, with denser waves and faster hazard speeds as pressure rises
-- corrupted lanes now give a short yellow **HOT SOON** warning before they activate, making risk/reward reads more immediate
-- HUD now surfaces overall **pace** plus the current hazard pattern label, so escalation is easier to feel in the moment
-- hazard spawning has light variation through **Single**, **Split**, **Stagger**, and **Pinch** patterns instead of mostly isolated drops
-- corrupted lane play still pays better, but the lane preview and stronger bank messaging make the cash-out decision clearer
+- one authored level that lasts about 24 seconds
+- exact same obstacle sequence every attempt
+- clear ready state before the run starts
+- fail state on any collision
+- quick restart after fail
+- simple level complete state when the final sequence is cleared
+- sparse scripted corrupted lane moments, no random corruption
 
 ## Mobile tweaks included
 
