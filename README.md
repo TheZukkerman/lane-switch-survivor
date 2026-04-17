@@ -86,13 +86,13 @@ Then open <http://localhost:4173>.
 - Swipe horizontally on the playfield
 - Restart button, or Space after game over
 
-## Iteration 2, Corrupted Lane
+## Iteration 3, tempo + readability pass
 
-- one lane is periodically marked as **CORRUPTED** with a bright purple pulse and border
-- sitting in that lane gives faster passive score and builds a **banked bonus**
-- leaving the lane before overload instantly cashes out the banked bonus
-- staying too long fills the corruption meter and kills the run
-- hazards that spawn inside the corrupted lane are also faster and visually hotter
+- tempo ramps harder over the run, with denser waves and faster hazard speeds as pressure rises
+- corrupted lanes now give a short yellow **HOT SOON** warning before they activate, making risk/reward reads more immediate
+- HUD now surfaces overall **pace** plus the current hazard pattern label, so escalation is easier to feel in the moment
+- hazard spawning has light variation through **Single**, **Split**, **Stagger**, and **Pinch** patterns instead of mostly isolated drops
+- corrupted lane play still pays better, but the lane preview and stronger bank messaging make the cash-out decision clearer
 
 ## Mobile tweaks included
 

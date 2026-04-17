@@ -4,6 +4,7 @@ const timeEl = document.getElementById('time');
 const bestEl = document.getElementById('best');
 const scoreEl = document.getElementById('score');
 const corruptEl = document.getElementById('corrupt');
+const paceEl = document.getElementById('pace');
 const leftBtn = document.getElementById('leftBtn');
 const rightBtn = document.getElementById('rightBtn');
 const restartBtn = document.getElementById('restartBtn');
@@ -14,13 +15,14 @@ const LANE_COUNT = 3;
 const laneWidth = WIDTH / LANE_COUNT;
 const playerY = HEIGHT - 92;
 const playerRadius = 24;
-const hazardWidth = laneWidth * 0.52;
-const hazardHeight = 54;
+const BASE_HAZARD_WIDTH = laneWidth * 0.52;
+const BASE_HAZARD_HEIGHT = 54;
 const BASE_POINTS_PER_SECOND = 10;
 const CORRUPTED_POINTS_PER_SECOND = 26;
-const CORRUPTION_TRIGGER_MIN = 6;
-const CORRUPTION_TRIGGER_MAX = 10;
-const CORRUPTION_DURATION = 5.4;
+const CORRUPTION_TRIGGER_MIN = 5.5;
+const CORRUPTION_TRIGGER_MAX = 8.5;
+const CORRUPTION_WARNING_DURATION = 1.05;
+const CORRUPTION_DURATION = 5.8;
 const CORRUPTION_MAX_EXPOSURE = 1.15;
 const CORRUPTION_COOLDOWN_RATE = 1.8;
 const CORRUPTION_BONUS_RATE = 42;
@@ -31,6 +33,7 @@ let bestScore = Number(localStorage.getItem('laneSwitchBestScore') || 0);
 let currentLane = 1;
 let hazards = [];
 let spawnTimer = 0;
+let spawnQueue = [];
 let runTime = 0;
 let score = 0;
 let gameOver = false;
@@ -38,12 +41,15 @@ let lastFrame = 0;
 let touchStartX = null;
 let corruptionLane = null;
 let corruptionTimer = 0;
+let corruptionWarningLane = null;
+let corruptionWarningTimer = 0;
 let nextCorruptionAt = 0;
 let corruptionExposure = 0;
 let corruptionBonusBank = 0;
 let bonusPopupTimer = 0;
 let lastBonusAward = 0;
 let lastDeathReason = 'Hit hazard';
+let lastPatternLabel = 'Single';
 
 bestEl.textContent = `${formatTime(bestTime)} • ${formatScore(bestScore)}`;
 
@@ -63,19 +69,37 @@ function isLaneCorrupted(lane) {
   return corruptionLane === lane && corruptionTimer > 0;
 }
 
+function isLaneWarning(lane) {
+  return corruptionWarningLane === lane && corruptionWarningTimer > 0;
+}
+
 function randomCorruptionTrigger() {
   return CORRUPTION_TRIGGER_MIN + Math.random() * (CORRUPTION_TRIGGER_MAX - CORRUPTION_TRIGGER_MIN);
+}
+
+function getIntensity() {
+  return Math.min(runTime / 45, 1);
+}
+
+function getPressureLevel() {
+  if (runTime < 12) return 'LOW';
+  if (runTime < 24) return 'RISING';
+  if (runTime < 38) return 'HIGH';
+  return 'MELTDOWN';
 }
 
 function updateHud() {
   timeEl.textContent = formatTime(runTime);
   scoreEl.textContent = formatScore(score);
+  paceEl.textContent = `${getPressureLevel()} • ${lastPatternLabel}`;
 
   const corruptionPct = Math.min(corruptionExposure / CORRUPTION_MAX_EXPOSURE, 1);
   if (isLaneCorrupted(currentLane)) {
     corruptEl.textContent = `RISK ${Math.round(corruptionPct * 100)}% • BANK ${formatScore(corruptionBonusBank)}`;
   } else if (corruptionBonusBank > 0) {
     corruptEl.textContent = `CASH OUT ${formatScore(corruptionBonusBank)}`;
+  } else if (corruptionWarningLane !== null && corruptionWarningTimer > 0) {
+    corruptEl.textContent = `HOT LANE ${corruptionWarningLane + 1} INCOMING`;
   } else if (corruptionExposure > 0.03) {
     corruptEl.textContent = `COOL ${Math.round(corruptionPct * 100)}%`;
   } else {
@@ -86,7 +110,8 @@ function updateHud() {
 function resetGame() {
   currentLane = 1;
   hazards = [];
-  spawnTimer = 0.6;
+  spawnTimer = 0.72;
+  spawnQueue = [];
   runTime = 0;
   score = 0;
   gameOver = false;
@@ -94,12 +119,15 @@ function resetGame() {
   touchStartX = null;
   corruptionLane = null;
   corruptionTimer = 0;
+  corruptionWarningLane = null;
+  corruptionWarningTimer = 0;
   nextCorruptionAt = randomCorruptionTrigger();
   corruptionExposure = 0;
   corruptionBonusBank = 0;
   bonusPopupTimer = 0;
   lastBonusAward = 0;
   lastDeathReason = 'Hit hazard';
+  lastPatternLabel = 'Single';
   updateHud();
 }
 
@@ -108,22 +136,47 @@ function moveLane(delta) {
   currentLane = Math.max(0, Math.min(LANE_COUNT - 1, currentLane + delta));
 }
 
-function spawnHazard() {
-  const lane = Math.floor(Math.random() * LANE_COUNT);
-  const isCorrupted = isLaneCorrupted(lane);
-  const speed = 260 + Math.min(runTime * 8, 180) + (isCorrupted ? 78 : 0);
+function createHazard(lane, options = {}) {
+  const corrupted = options.forceCorrupted ?? isLaneCorrupted(lane);
+  const intensity = getIntensity();
+  const size = options.size ?? 1;
+  const width = BASE_HAZARD_WIDTH * (0.92 + size * 0.2);
+  const height = BASE_HAZARD_HEIGHT * (0.88 + size * 0.18);
+  const speed =
+    252 +
+    Math.min(runTime * 8.5, 220) +
+    intensity * 60 +
+    (corrupted ? 74 : 0) +
+    (options.speedBonus ?? 0);
+
   hazards.push({
     lane,
-    y: -hazardHeight,
+    y: options.y ?? -height,
     speed,
-    isCorrupted,
+    isCorrupted: corrupted,
+    width,
+    height,
+    stripe: options.stripe ?? (corrupted ? '#ffd1ec' : '#ffd4da'),
   });
 }
 
+function scheduleHazard(delay, lane, options = {}) {
+  spawnQueue.push({ delay, lane, options });
+}
+
+function triggerCorruptionWarning() {
+  const selectable = Array.from({ length: LANE_COUNT }, (_, lane) => lane).filter(
+    (lane) => lane !== corruptionLane,
+  );
+  corruptionWarningLane = selectable[Math.floor(Math.random() * selectable.length)];
+  corruptionWarningTimer = CORRUPTION_WARNING_DURATION;
+}
+
 function triggerCorruption() {
-  const safeLanes = Array.from({ length: LANE_COUNT }, (_, lane) => lane).filter((lane) => lane !== corruptionLane);
-  corruptionLane = safeLanes[Math.floor(Math.random() * safeLanes.length)];
+  corruptionLane = corruptionWarningLane;
   corruptionTimer = CORRUPTION_DURATION;
+  corruptionWarningLane = null;
+  corruptionWarningTimer = 0;
 }
 
 function endRun(reason) {
@@ -148,11 +201,67 @@ function awardCorruptionBonus() {
   bonusPopupTimer = 1.1;
 }
 
+function pickSpawnPattern() {
+  const intensity = getIntensity();
+  const roll = Math.random();
+
+  if (runTime < 10 || roll < 0.35 - intensity * 0.1) {
+    const lane = Math.floor(Math.random() * LANE_COUNT);
+    return {
+      label: 'Single',
+      spawns: [{ delay: 0, lane, options: { size: 0.95 } }],
+    };
+  }
+
+  if (roll < 0.6) {
+    const lanes = [0, 1, 2].sort(() => Math.random() - 0.5).slice(0, 2);
+    return {
+      label: 'Split',
+      spawns: lanes.map((lane) => ({ delay: 0, lane, options: { size: 0.9, speedBonus: 16 } })),
+    };
+  }
+
+  if (roll < 0.82) {
+    const lane = Math.floor(Math.random() * LANE_COUNT);
+    return {
+      label: 'Stagger',
+      spawns: [
+        { delay: 0, lane, options: { size: 0.88, speedBonus: 10 } },
+        { delay: Math.max(0.16, 0.24 - intensity * 0.06), lane, options: { size: 1.02, speedBonus: 34 } },
+      ],
+    };
+  }
+
+  const safeLane = Math.floor(Math.random() * LANE_COUNT);
+  const lanes = [0, 1, 2].filter((lane) => lane !== safeLane);
+  return {
+    label: 'Pinch',
+    spawns: lanes.map((lane, index) => ({
+      delay: index * Math.max(0.05, 0.1 - intensity * 0.04),
+      lane,
+      options: { size: 0.96, speedBonus: 26 },
+    })),
+  };
+}
+
+function spawnWave() {
+  const pattern = pickSpawnPattern();
+  lastPatternLabel = pattern.label;
+  pattern.spawns.forEach((spawn) => scheduleHazard(spawn.delay, spawn.lane, spawn.options));
+}
+
 function update(delta) {
   if (gameOver) return;
 
   runTime += delta;
   bonusPopupTimer = Math.max(0, bonusPopupTimer - delta);
+
+  if (corruptionWarningTimer > 0) {
+    corruptionWarningTimer -= delta;
+    if (corruptionWarningTimer <= 0 && corruptionWarningLane !== null) {
+      triggerCorruption();
+    }
+  }
 
   if (corruptionTimer > 0) {
     corruptionTimer -= delta;
@@ -161,8 +270,8 @@ function update(delta) {
       corruptionLane = null;
       nextCorruptionAt = runTime + randomCorruptionTrigger();
     }
-  } else if (runTime >= nextCorruptionAt) {
-    triggerCorruption();
+  } else if (corruptionWarningLane === null && runTime >= nextCorruptionAt - CORRUPTION_WARNING_DURATION) {
+    triggerCorruptionWarning();
   }
 
   const onCorruptedLane = isLaneCorrupted(currentLane);
@@ -186,16 +295,24 @@ function update(delta) {
 
   spawnTimer -= delta;
   if (spawnTimer <= 0) {
-    spawnHazard();
-    const pressure = Math.max(0.3, 0.88 - runTime * 0.03);
-    spawnTimer = pressure + Math.random() * 0.22;
+    spawnWave();
+    const intensity = getIntensity();
+    const corruptionPressure = corruptionLane !== null ? 0.08 : 0;
+    spawnTimer = Math.max(0.28, 0.8 - intensity * 0.34 - corruptionPressure) + Math.random() * 0.16;
   }
+
+  spawnQueue.forEach((entry) => {
+    entry.delay -= delta;
+  });
+  const ready = spawnQueue.filter((entry) => entry.delay <= 0);
+  spawnQueue = spawnQueue.filter((entry) => entry.delay > 0);
+  ready.forEach((entry) => createHazard(entry.lane, entry.options));
 
   hazards.forEach((hazard) => {
     hazard.y += hazard.speed * delta;
   });
 
-  hazards = hazards.filter((hazard) => hazard.y < HEIGHT + hazardHeight);
+  hazards = hazards.filter((hazard) => hazard.y < HEIGHT + hazard.height);
 
   const playerLeft = laneCenter(currentLane) - playerRadius;
   const playerRight = laneCenter(currentLane) + playerRadius;
@@ -203,10 +320,10 @@ function update(delta) {
   const playerBottom = playerY + playerRadius;
 
   for (const hazard of hazards) {
-    const hazardLeft = laneCenter(hazard.lane) - hazardWidth / 2;
-    const hazardRight = laneCenter(hazard.lane) + hazardWidth / 2;
+    const hazardLeft = laneCenter(hazard.lane) - hazard.width / 2;
+    const hazardRight = laneCenter(hazard.lane) + hazard.width / 2;
     const hazardTop = hazard.y;
-    const hazardBottom = hazard.y + hazardHeight;
+    const hazardBottom = hazard.y + hazard.height;
 
     const overlap =
       playerLeft < hazardRight &&
@@ -231,6 +348,22 @@ function drawBackground() {
 
   for (let lane = 0; lane < LANE_COUNT; lane += 1) {
     const x = lane * laneWidth;
+
+    if (isLaneWarning(lane)) {
+      const pulse = 0.5 + Math.sin(runTime * 11) * 0.25;
+      ctx.fillStyle = `rgba(255, 196, 92, ${0.14 + pulse * 0.08})`;
+      ctx.fillRect(x, 0, laneWidth, HEIGHT);
+      ctx.strokeStyle = `rgba(255, 204, 116, ${0.55 + pulse * 0.18})`;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x + 6, 6, laneWidth - 12, HEIGHT - 12);
+
+      ctx.fillStyle = `rgba(255, 235, 179, ${0.9 + pulse * 0.05})`;
+      ctx.font = 'bold 16px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('HOT SOON', x + laneWidth / 2, 32);
+      ctx.font = 'bold 13px system-ui';
+      ctx.fillText('GET READY', x + laneWidth / 2, 52);
+    }
 
     if (isLaneCorrupted(lane)) {
       const pulse = 0.52 + Math.sin(runTime * 8) * 0.18;
@@ -296,12 +429,12 @@ function drawPlayer() {
 
 function drawHazards() {
   hazards.forEach((hazard) => {
-    const x = laneCenter(hazard.lane) - hazardWidth / 2;
+    const x = laneCenter(hazard.lane) - hazard.width / 2;
     ctx.fillStyle = hazard.isCorrupted ? '#ff3d96' : '#ff5d73';
-    ctx.fillRect(x, hazard.y, hazardWidth, hazardHeight);
+    ctx.fillRect(x, hazard.y, hazard.width, hazard.height);
 
-    ctx.fillStyle = hazard.isCorrupted ? '#ffd1ec' : '#ffd4da';
-    ctx.fillRect(x + 8, hazard.y + 8, hazardWidth - 16, 10);
+    ctx.fillStyle = hazard.stripe;
+    ctx.fillRect(x + 8, hazard.y + 8, hazard.width - 16, 10);
   });
 }
 
@@ -311,18 +444,24 @@ function drawStatusText() {
   ctx.fillStyle = '#d7e2ff';
   ctx.fillText(`Score ${formatScore(score)}`, 18, HEIGHT - 106);
 
+  ctx.fillStyle = '#9eb3ff';
+  ctx.fillText(`Pace ${getPressureLevel()}`, 18, HEIGHT - 80);
+
   if (isLaneCorrupted(currentLane)) {
     const risk = Math.min(corruptionExposure / CORRUPTION_MAX_EXPOSURE, 1);
     ctx.fillStyle = '#ffde75';
-    ctx.fillText(`Bank ${formatScore(corruptionBonusBank)}`, 18, HEIGHT - 78);
+    ctx.fillText(`Bank ${formatScore(corruptionBonusBank)}`, 18, HEIGHT - 54);
 
     ctx.fillStyle = '#ff8fb9';
-    ctx.fillRect(18, HEIGHT - 62, 124, 10);
+    ctx.fillRect(18, HEIGHT - 38, 124, 10);
     ctx.fillStyle = '#ffe26f';
-    ctx.fillRect(18, HEIGHT - 62, 124 * risk, 10);
+    ctx.fillRect(18, HEIGHT - 38, 124 * risk, 10);
   } else if (corruptionBonusBank > 0) {
     ctx.fillStyle = '#ffe26f';
-    ctx.fillText(`Leave now to cash out`, 18, HEIGHT - 78);
+    ctx.fillText('Leave now to cash out', 18, HEIGHT - 54);
+  } else if (corruptionWarningLane !== null) {
+    ctx.fillStyle = '#ffd780';
+    ctx.fillText(`Lane ${corruptionWarningLane + 1} heats next`, 18, HEIGHT - 54);
   }
 
   if (bonusPopupTimer > 0) {
