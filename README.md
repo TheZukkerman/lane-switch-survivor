@@ -1,15 +1,6 @@
 # Lane-Switch Survivor prototype
 
-Current direction: a fixed 3-lane mastery game, not endless survival.
-
-## Fastest mobile test strategy
-
-Keep the prototype as a plain static web game, then serve it either:
-
-- over local Wi-Fi from the dev machine, or
-- over USB with `adb reverse` if phone and computer are connected
-
-That is the quickest low-friction Android path right now, without rebuilding it as a full Flutter app.
+Current direction: a small authored progression test, not endless survival.
 
 ## Start the prototype
 
@@ -41,14 +32,8 @@ If you want a different port:
    ```
 3. Make sure the Android phone is on the same Wi-Fi.
 4. Open that URL in Chrome on the phone.
-5. Play with:
-   - tap left or right half of the playfield
-   - swipe horizontally on the playfield
-   - optional on-screen buttons under the canvas
 
 ### Option B, USB with ADB reverse
-
-Use this if local network access is annoying or blocked.
 
 1. Connect the Android phone with USB.
 2. Confirm ADB sees it:
@@ -70,8 +55,6 @@ Use this if local network access is annoying or blocked.
 
 ## Local desktop run
 
-If you only want to test locally on the computer:
-
 ```bash
 ./serve-mobile.sh
 ```
@@ -84,22 +67,25 @@ Then open <http://localhost:4173>.
 - A / D
 - Tap left or right side of the playfield
 - Swipe horizontally on the playfield
-- Restart button, or Space after game over
+- Reset button, or Space when not actively running
 
-## Current build, first fixed level
+## Current build, simple progression slice
 
-- one authored level that lasts about 24 seconds
-- exact same obstacle sequence every attempt
-- clear ready state before the run starts
-- fail state on any collision
-- quick restart after fail
-- simple level complete state when the final sequence is cleared
-- sparse scripted corrupted lane moments, no random corruption
+- Level 1 starts open and playable until you clear it
+- clearing Level 1 marks it done and permanently retires it
+- Level 2 unlocks only after Level 1 is cleared
+- completed levels cannot be started again
+- the level list clearly shows `OPEN`, `LOCKED`, and `DONE`
+- the goal card explains what clears the currently selected level
+- localStorage persists progression between refreshes
+- Level 2 is a modest step up, not a giant jump
 
-## Mobile tweaks included
+## Resetting progress for repeat tests
 
-- mobile viewport and theme color metadata
-- safe-area friendly layout for Android phones
-- bigger tap targets for touch controls
-- canvas sizing that fits better inside phone-height constraints
-- more reliable swipe handling via pointer capture
+Open the browser console and run:
+
+```js
+localStorage.removeItem('laneSwitchProgressV2')
+```
+
+Then refresh.
