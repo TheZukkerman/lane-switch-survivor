@@ -32,17 +32,22 @@ const HAZARD_WIDTH = laneWidth * 0.56;
 const HAZARD_HEIGHT = 56;
 const HAZARD_SPEED = 298;
 const HAZARD_TRAVEL_TIME = (playerY + playerRadius + HAZARD_HEIGHT) / HAZARD_SPEED;
-const STORAGE_KEY = 'laneSwitchProgressV4';
+const STORAGE_KEY = 'laneSwitchProgressV5';
 const LEVEL_ORDER = ['level1', 'level2', 'level3'];
+const MAP_NODE_LAYOUT = {
+  level1: { desktop: { x: '10%', y: '10%' }, mobile: { y: '8%' } },
+  level2: { desktop: { x: '56%', y: '38%' }, mobile: { y: '38%' } },
+  level3: { desktop: { x: '18%', y: '68%' }, mobile: { y: '69%' } },
+};
 
 const LEVEL_DEFS = {
   level1: {
     id: 'level1',
     index: 1,
-    name: 'Level 1',
-    title: 'Warm-Up Route',
+    name: 'Lägerelden',
+    title: 'Startplatsen vid glöden',
     duration: 18,
-    blurb: 'A gentle first route. Learn lane timing, read single threats, and meet one soft two-lane beat.',
+    blurb: 'Första stoppet på kartan. Lär dig lane-rytmen med en trygg, tydlig öppning.',
     clearGoal: 'Survive to the end of the route.',
     masteryGoal: 'Finish with a clean, calm rhythm and beat the 16.5s mastery target.',
     rewardText: 'Clear earns 1 star. Mastery upgrades it to a gold route marker.',
@@ -68,10 +73,10 @@ const LEVEL_DEFS = {
   level2: {
     id: 'level2',
     index: 2,
-    name: 'Level 2',
-    title: 'River Bend',
+    name: 'Skogsstigen',
+    title: 'Den smala vägen mellan träden',
     duration: 22,
-    blurb: 'Same rules, slightly tighter reads. The route starts threading small traps and denser beats.',
+    blurb: 'Andra stoppet. Samma regler, lite mindre luft, och en tydlig känsla av att du lämnar lägret bakom dig.',
     clearGoal: 'Survive the full route with faster pressure and more committed swaps.',
     masteryGoal: 'Stay clean through the final wave and beat the 20.2s mastery target.',
     rewardText: 'Clear earns 1 star. Mastery upgrades the route marker and completes the bend cleanly.',
@@ -107,10 +112,10 @@ const LEVEL_DEFS = {
   level3: {
     id: 'level3',
     index: 3,
-    name: 'Level 3',
-    title: 'Sky Bridge',
+    name: 'Ruinen på kullen',
+    title: 'Sista klättringen till ruinen',
     duration: 25,
-    blurb: 'A real third step, not a spike. More tempo, more lane traps, and a finish that asks for planning.',
+    blurb: 'Sista stoppet i mini-resan. Tydligt skarpare, men fortfarande läsbart om du planerar framåt.',
     clearGoal: 'Hold through the full bridge route and keep control during the layered ending.',
     masteryGoal: 'Beat the 22.7s mastery target while staying ahead of the corruption swings.',
     rewardText: 'Clear earns 1 star. Mastery turns the whole early world map gold.',
@@ -232,9 +237,23 @@ function isLevelUnlocked(id) {
 
 function getLevelState(id) {
   if (!isLevelUnlocked(id)) return 'locked';
-  if (progress.mastery[id]) return 'mastered';
-  if (progress.completed[id]) return 'complete';
+  if (currentLevelId === id) return 'current';
+  if (progress.completed[id]) return 'done';
   return 'open';
+}
+
+function getNodeStatusText(id) {
+  const state = getLevelState(id);
+  if (state === 'current') return 'Current';
+  if (state === 'open') return 'Open';
+  if (state === 'done') return 'Done';
+  return 'Locked';
+}
+
+function getUnlockText(id) {
+  const previousLevelId = LEVEL_ORDER[LEVEL_ORDER.indexOf(id) - 1];
+  if (!previousLevelId) return 'Start här';
+  return `Lås upp genom att klara ${LEVEL_DEFS[previousLevelId].name}`;
 }
 
 function saveProgress() {
@@ -257,41 +276,70 @@ function isLaneCorrupted(lane) {
 
 function getRewardText(id) {
   const stars = progress.rewards[id] || 0;
-  if (!stars) return 'No route stars yet';
-  return `${'★'.repeat(stars)}${progress.mastery[id] ? ' + gold marker' : ''}`;
+  if (!stars) return 'Ingen markör ännu';
+  return `${'★'.repeat(stars)}${progress.mastery[id] ? ' + guldklar' : ''}`;
 }
 
 function getProgressSummary() {
-  const clearedCount = LEVEL_ORDER.filter((id) => progress.completed[id]).length;
-  if (progress.mastery.level3) return 'All three early routes are cleared and mastered. The mini world map now feels complete.';
-  if (progress.completed.level3) return 'Three routes are clear. Replay for mastery and check if the progression arc feels right.';
-  if (progress.completed.level2) return 'Level 3 is unlocked. This should feel like the last step of the opening world.';
-  if (progress.completed.level1) return 'Level 2 is open and the route map has started to unfold.';
-  return 'Start at Level 1. Each clear opens the next stop on the route.';
+  if (progress.mastery.level3) return 'Hela mini-resan är klar. Kolla om kartan nu känns som en liten värld med tydlig början, mitt och slut.';
+  if (progress.completed.level3) return 'Ruinen är nådd. Replays ska nu kännas som förbättring, inte som att leta efter nästa väg.';
+  if (progress.completed.level2) return 'Ruinen på kullen är nu öppen som sista stopp på resan.';
+  if (progress.completed.level1) return 'Skogsstigen är öppen. Kartan ska nu kännas som att resan fortsätter uppåt.';
+  return 'Du börjar vid lägerelden. Klara en nod för att öppna nästa stopp på kartan.';
 }
 
 function renderWorldMap() {
-  worldMapEl.innerHTML = '';
+  worldMapEl.innerHTML = `
+    <svg class="map-paths" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#7df9ff" />
+          <stop offset="100%" stop-color="#ffe26f" />
+        </linearGradient>
+      </defs>
+      <path class="path-base" d="M26 24 C40 30, 55 38, 67 46" />
+      <path class="path-base" d="M67 46 C58 55, 46 67, 34 78" />
+      <path class="path-progress" d="M26 24 C40 30, 55 38, 67 46" />
+      <path class="path-progress" d="M67 46 C58 55, 46 67, 34 78" />
+    </svg>
+  `;
 
   LEVEL_ORDER.forEach((id) => {
     const level = getLevel(id);
     const state = getLevelState(id);
+    const layout = MAP_NODE_LAYOUT[id];
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `world-node is-${state}${currentLevelId === id ? ' is-selected' : ''}`;
+    button.className = `world-node is-${state}`;
     button.disabled = state === 'locked';
+    button.style.setProperty('--x', layout.desktop.x);
+    button.style.setProperty('--y', layout.desktop.y);
+    button.dataset.mobileY = layout.mobile.y;
     button.innerHTML = `
       <div class="node-top">
         <span class="node-number">${level.index}</span>
-        <span class="badge">${state === 'open' ? 'OPEN' : state === 'complete' ? 'CLEAR' : state === 'mastered' ? 'MASTERED' : 'LOCKED'}</span>
+        <span class="badge">${getNodeStatusText(id)}</span>
       </div>
-      <strong>${level.title}</strong>
-      <p>${level.blurb}</p>
-      <small>${getRewardText(id)}</small>
+      <div class="node-meta">
+        <span class="node-place">Plats ${level.index}</span>
+        <span class="node-status">${getNodeStatusText(id)}</span>
+      </div>
+      <strong>${level.name}</strong>
+      <p>${level.title}</p>
+      <div class="node-bottom">
+        <span>${state === 'locked' ? `🔒 ${getUnlockText(id)}` : state === 'done' ? '✓ Klar väg' : state === 'current' ? 'Du är här' : 'Tryck för att spela'}</span>
+      </div>
+      <small>${state === 'locked' ? 'Vägen öppnas längre fram' : getRewardText(id)}</small>
     `;
     button.addEventListener('click', () => selectLevel(id));
     worldMapEl.appendChild(button);
   });
+
+  if (window.matchMedia('(max-width: 520px)').matches) {
+    Array.from(worldMapEl.querySelectorAll('.world-node')).forEach((node) => {
+      node.style.setProperty('--y', node.dataset.mobileY);
+    });
+  }
 }
 
 function updateSideCard() {
@@ -300,7 +348,7 @@ function updateSideCard() {
   if (!level) {
     detailEyebrowEl.textContent = 'Route briefing';
     detailTitleEl.textContent = 'Select a route';
-    detailBodyEl.textContent = 'Level 1 teaches the lane rhythm. Clear it to open the next road segment.';
+    detailBodyEl.textContent = 'Lägerelden lär ut rytmen. Klarar du den öppnas nästa stopp på vägen.';
     detailMasteryEl.textContent = 'Optional extra credit for a cleaner run.';
     detailRewardEl.textContent = '1 star on clear, bonus on mastery.';
     detailControlsEl.textContent = 'Tap left or right side, swipe, or use arrow keys.';
@@ -309,7 +357,6 @@ function updateSideCard() {
     return;
   }
 
-  const state = getLevelState(level.id);
   detailEyebrowEl.textContent =
     gameState === 'running' ? 'Route live' : gameState === 'failed' ? 'Run failed' : gameState === 'won' ? 'Route complete' : autoAdvanceMessage ? 'Next route ready' : 'Route briefing';
   detailTitleEl.textContent = `${level.name} · ${level.title}`;
@@ -348,9 +395,9 @@ function updateHud() {
     bestEl.textContent = '0.0s • 0 clears';
     paceEl.textContent = '0%';
     corruptEl.textContent = 'SELECT A LEVEL';
-    goalTextEl.textContent = 'Pick a route to see clear and mastery goals.';
-    statusTextEl.textContent = 'Level 1 is open. The rest of the road unlocks one clear at a time.';
-    hintTextEl.textContent = 'This pass is about feeling a tiny world map, three real levels, and cleaner route briefings.';
+    goalTextEl.textContent = 'Välj en nod för att se clear- och mastery-mål.';
+    statusTextEl.textContent = 'Lägerelden är öppen. Resten av vägen låses upp en klarad nod i taget.';
+    hintTextEl.textContent = 'Det här passet testar om kartan känns som en liten resa, inte tre kort i rad.';
     restartBtn.disabled = true;
     updateSideCard();
     return;
@@ -365,13 +412,15 @@ function updateHud() {
   restartBtn.disabled = false;
 
   if (!isLevelUnlocked(level.id)) {
-    statusTextEl.textContent = `${level.name} is locked.`;
+    statusTextEl.textContent = `${level.name} är låst. ${getUnlockText(level.id)}.`;
+  } else if (currentLevelId === level.id) {
+    statusTextEl.textContent = `${level.name} är nuvarande stopp. Du är här.`;
   } else if (progress.mastery[level.id]) {
-    statusTextEl.textContent = `${level.name} mastered. Reward banked: ${getRewardText(level.id)}.`;
+    statusTextEl.textContent = `${level.name} är klar med mastery. Belöning: ${getRewardText(level.id)}.`;
   } else if (progress.completed[level.id]) {
-    statusTextEl.textContent = `${level.name} cleared. Replay it or move further up the route.`;
+    statusTextEl.textContent = `${level.name} är klar. Spela om eller fortsätt vidare på kartan.`;
   } else {
-    statusTextEl.textContent = `${level.name} is ready. Mastery target: ${level.masteryGoal}`;
+    statusTextEl.textContent = `${level.name} är öppen. Mastery-mål: ${level.masteryGoal}`;
   }
 
   if (gameState === 'select') {

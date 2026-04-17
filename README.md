@@ -79,36 +79,41 @@ It should open automatically. If not, open the printed localhost URL manually.
 - Swipe horizontally on the playfield
 - Reset button, or Space when not actively running
 
-## Current build, soft progression slice
+## Current build, readable mini-world slice
 
-- Level 1 is a gentle onboarding route with wider timing gaps and one light corruption moment
-- Level 2 activates immediately after clearing Level 1, no extra selection click needed
-- every level now has a pre-level briefing panel with:
-  - level name
-  - clear goal
-  - mastery goal
-  - reward preview
-- progression now uses a simple `clear` vs `mastery` structure
-  - clear advances progression
-  - mastery gives a better placeholder reward/status
-- rewards are intentionally lightweight placeholders, shown as stars and a badge in UI
-- both levels stay replayable so testers can compare clear versus mastery runs
+- the top progression area is now a path-style map instead of three cards in a row
+- the first three levels are framed as a mini-journey:
+  - 1. Lägerelden
+  - 2. Skogsstigen
+  - 3. Ruinen på kullen
+- connector lines now link the nodes so the route reads like a small world path
+- every node now shows:
+  - number
+  - place name
+  - explicit status: `Current`, `Open`, `Locked`, or `Done`
+- a legend/status row sits above the map for fast scanning
+- state styling is more distinct:
+  - `Current` = strongest highlight, "you are here"
+  - `Open` = active and clearly clickable
+  - `Locked` = darker with lock copy
+  - `Done` = filled/checked completed stop
+- the run flow is unchanged, including auto-advance after a clear
 - localStorage persists progression between refreshes
 
 ## Suggested playtest checks
 
-1. Start Level 1 and confirm it feels readable on first attempt.
-2. Clear Level 1 and make sure the game lands directly on the Level 2 pre-level overlay.
-3. Read the overlay before each level and confirm the goals are understandable without explanation.
-4. Clear both levels once, then replay them to see if mastery feels like optional extra credit rather than a punishment.
-5. Watch the level cards after clears and mastery to confirm rewards/status update cleanly.
+1. Launch the build and spend 5 to 10 seconds only looking at the map. It should already read like a tiny journey.
+2. Without reading the side card much, identify where you are now, what is playable, and what is locked.
+3. Clear Lägerelden and confirm Skogsstigen feels like the next stop on the same path.
+4. Clear Skogsstigen and check whether Ruinen på kullen feels like a final destination instead of just card three.
+5. Replay a cleared node and confirm `Done` still reads as completed while the selected node still feels `Current`.
 
 ## Resetting progress for repeat tests
 
 Open the browser console and run:
 
 ```js
-localStorage.removeItem('laneSwitchProgressV3')
+localStorage.removeItem('laneSwitchProgressV5')
 ```
 
 Then refresh.
