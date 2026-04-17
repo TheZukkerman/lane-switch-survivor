@@ -4,18 +4,28 @@ Current direction: a small authored progression test with a softer early curve.
 
 ## Start the prototype
 
-From this folder:
+Fastest local playtest flow:
+
+```bash
+./playtest.sh
+```
+
+What it does:
+- starts a local server automatically
+- reuses the existing playtest server if one is already running
+- picks the first free port starting at `4173`
+- opens the game in your browser when the environment supports it
+
+If you want to prefer a different starting port:
+
+```bash
+PLAYTEST_PORT=8080 ./playtest.sh
+```
+
+The older direct server script still works too:
 
 ```bash
 ./serve-mobile.sh
-```
-
-Default port is `4173`.
-
-If you want a different port:
-
-```bash
-./serve-mobile.sh 8080
 ```
 
 ## Test on Android
@@ -24,7 +34,7 @@ If you want a different port:
 
 1. Start the server:
    ```bash
-   ./serve-mobile.sh
+   ./playtest.sh
    ```
 2. Note the LAN URL printed in the terminal, for example:
    ```
@@ -42,24 +52,24 @@ If you want a different port:
    ```
 3. Start the server:
    ```bash
-   ./serve-mobile.sh
+   ./playtest.sh
    ```
-4. In another terminal, forward the port to the phone:
+4. In another terminal, forward the same port shown by the launcher, for example:
    ```bash
-   adb reverse tcp:4173 tcp:4173
+   adb reverse tcp:4175 tcp:4175
    ```
-5. Open this on the phone:
+5. Open the matching localhost URL on the phone, for example:
    ```
-   http://localhost:4173
+   http://localhost:4175
    ```
 
 ## Local desktop run
 
 ```bash
-./serve-mobile.sh
+./playtest.sh
 ```
 
-Then open <http://localhost:4173>.
+It should open automatically. If not, open the printed localhost URL manually.
 
 ## Controls
 
@@ -102,3 +112,10 @@ localStorage.removeItem('laneSwitchProgressV3')
 ```
 
 Then refresh.
+
+## Playtest launcher notes
+
+- The launcher keeps the server running in the background and writes state to `.playtest/`.
+- Run `./playtest.sh` again anytime to reopen the current build quickly.
+- If port `4173` is busy, it tries the next ports until it finds a free one.
+- Browser auto-open depends on `xdg-open`, `open`, or `wslview` being available.
