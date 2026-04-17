@@ -95,6 +95,10 @@ body {
   color: #c7d4ff;
 }
 
+.level-button .level-subline {
+  color: #8cb1ff;
+}
+
 .level-button .level-meta {
   display: flex;
   justify-content: space-between;
@@ -161,7 +165,6 @@ body {
 .hud strong,
 .goal-card strong {
   font-size: 0.96rem;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }

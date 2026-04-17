@@ -25,93 +25,74 @@ const HAZARD_WIDTH = laneWidth * 0.56;
 const HAZARD_HEIGHT = 56;
 const HAZARD_SPEED = 298;
 const HAZARD_TRAVEL_TIME = (playerY + playerRadius + HAZARD_HEIGHT) / HAZARD_SPEED;
-const STORAGE_KEY = 'laneSwitchProgressV2';
+const STORAGE_KEY = 'laneSwitchProgressV3';
 const LEVEL_ORDER = ['level1', 'level2'];
 
 const LEVEL_DEFS = {
   level1: {
     id: 'level1',
     name: 'Level 1',
-    duration: 24,
-    blurb: 'Fixed intro route. Learn one authored pattern and survive to the end.',
-    winText: 'Survive the full 24 second route.',
-    hint: 'Level 1 stays open until you clear it once.',
-    readyText: 'Fixed 24 second route',
-    inRunText: 'Learn the route, then commit',
-    completeText: 'Level 1 complete. It is now retired.',
+    title: 'Warm-Up Route',
+    duration: 18,
+    blurb: 'A gentle first route with roomy gaps so the player learns lane timing without pressure.',
+    clearGoal: 'Survive to the end of the route.',
+    masteryGoal: 'Finish with at least 3.0 seconds of buffer before any panic hit would have happened.',
+    rewardText: 'Clear earns 1 star. Mastery upgrades it to a gold star.',
+    hint: 'Level 1 is meant to teach the rhythm. Start moving early, not late.',
+    readyText: 'Easy onboarding route',
+    inRunText: 'Learn the lane rhythm and stay calm',
+    completeText: 'Level 1 clear secured. Level 2 is up next.',
+    masteryWindow: 16.5,
     events: [
-      { dodgeAt: 2.2, lane: 1 },
-      { dodgeAt: 3.35, lane: 0 },
-      { dodgeAt: 4.25, lane: 2 },
-      { dodgeAt: 5.35, lane: 1 },
-      { dodgeAt: 6.1, lane: 0 },
-      { dodgeAt: 6.65, lane: 2 },
-      { dodgeAt: 7.85, lanes: [0, 1] },
-      { dodgeAt: 9.05, lane: 2 },
-      { dodgeAt: 10.1, lane: 1 },
-      { dodgeAt: 11.1, lane: 0 },
-      { dodgeAt: 12.25, lane: 2 },
-      { dodgeAt: 13.2, lanes: [1, 2] },
-      { dodgeAt: 14.5, lane: 0 },
-      { dodgeAt: 15.3, lane: 1 },
-      { dodgeAt: 16.05, lane: 2 },
-      { dodgeAt: 17.1, lanes: [0, 2] },
-      { dodgeAt: 18.6, lane: 1 },
-      { dodgeAt: 19.55, lane: 0 },
-      { dodgeAt: 20.3, lane: 2 },
-      { dodgeAt: 21.35, lanes: [0, 1] },
-      { dodgeAt: 22.55, lane: 2 },
+      { dodgeAt: 2.8, lane: 1 },
+      { dodgeAt: 4.4, lane: 0 },
+      { dodgeAt: 5.8, lane: 2 },
+      { dodgeAt: 7.3, lane: 1 },
+      { dodgeAt: 8.7, lane: 0 },
+      { dodgeAt: 10.1, lane: 2 },
+      { dodgeAt: 11.6, lanes: [0, 1] },
+      { dodgeAt: 13.3, lane: 2 },
+      { dodgeAt: 14.8, lane: 1 },
+      { dodgeAt: 16.2, lane: 0 },
     ],
-    corruptionWindows: [
-      { start: 8.3, end: 10.5, lane: 1 },
-      { start: 18.0, end: 19.9, lane: 2 },
-    ],
+    corruptionWindows: [{ start: 12.1, end: 13.7, lane: 2 }],
   },
   level2: {
     id: 'level2',
     name: 'Level 2',
-    duration: 28,
-    blurb: 'Same core rules, but denser timing and more lane pressure.',
-    winText: 'Clear the 28 second route with tighter multi-lane reads.',
-    hint: 'Level 2 unlocks after Level 1 is completed.',
-    readyText: '28 second pressure test',
-    inRunText: 'React faster, hold the route in memory',
-    completeText: 'Level 2 complete. Nice, that is the whole test arc for now.',
+    title: 'Steadier Pressure',
+    duration: 22,
+    blurb: 'Still fair, but the reads come faster and a few lane traps ask for cleaner commitment.',
+    clearGoal: 'Survive the full route with the denser pattern.',
+    masteryGoal: 'Finish in one run without dropping a late save, plus hold pace through the final wave.',
+    rewardText: 'Clear earns 1 star. Mastery adds a badge and completes the slice cleanly.',
+    hint: 'This should feel like the same game, just with less breathing room.',
+    readyText: 'Slightly faster pressure route',
+    inRunText: 'Commit earlier and respect the two-lane beats',
+    completeText: 'Level 2 clear secured. That is the current soft progression arc.',
+    masteryWindow: 20.2,
     events: [
-      { dodgeAt: 2.0, lane: 1 },
-      { dodgeAt: 2.8, lane: 0 },
-      { dodgeAt: 3.55, lane: 2 },
-      { dodgeAt: 4.3, lanes: [0, 1] },
-      { dodgeAt: 5.15, lane: 2 },
-      { dodgeAt: 5.95, lane: 1 },
-      { dodgeAt: 6.7, lanes: [1, 2] },
-      { dodgeAt: 7.8, lane: 0 },
-      { dodgeAt: 8.45, lane: 2 },
-      { dodgeAt: 9.2, lane: 1 },
-      { dodgeAt: 10.05, lanes: [0, 2] },
-      { dodgeAt: 11.15, lane: 1 },
-      { dodgeAt: 12.0, lane: 0 },
-      { dodgeAt: 12.7, lane: 2 },
-      { dodgeAt: 13.45, lanes: [0, 1] },
-      { dodgeAt: 14.3, lane: 2 },
-      { dodgeAt: 15.15, lane: 1 },
-      { dodgeAt: 16.0, lanes: [1, 2] },
-      { dodgeAt: 17.05, lane: 0 },
-      { dodgeAt: 18.0, lanes: [0, 2] },
-      { dodgeAt: 19.15, lane: 1 },
-      { dodgeAt: 20.1, lane: 2 },
-      { dodgeAt: 21.0, lane: 0 },
-      { dodgeAt: 21.85, lanes: [0, 1] },
-      { dodgeAt: 22.8, lane: 2 },
-      { dodgeAt: 23.65, lane: 1 },
-      { dodgeAt: 24.35, lanes: [1, 2] },
-      { dodgeAt: 25.3, lane: 0 },
-      { dodgeAt: 26.1, lane: 2 },
+      { dodgeAt: 2.4, lane: 1 },
+      { dodgeAt: 3.6, lane: 0 },
+      { dodgeAt: 4.7, lane: 2 },
+      { dodgeAt: 5.8, lanes: [0, 1] },
+      { dodgeAt: 7.0, lane: 2 },
+      { dodgeAt: 8.0, lane: 1 },
+      { dodgeAt: 9.0, lanes: [1, 2] },
+      { dodgeAt: 10.3, lane: 0 },
+      { dodgeAt: 11.4, lane: 2 },
+      { dodgeAt: 12.4, lane: 1 },
+      { dodgeAt: 13.6, lanes: [0, 2] },
+      { dodgeAt: 15.0, lane: 1 },
+      { dodgeAt: 16.1, lane: 0 },
+      { dodgeAt: 17.1, lane: 2 },
+      { dodgeAt: 18.1, lanes: [0, 1] },
+      { dodgeAt: 19.2, lane: 2 },
+      { dodgeAt: 20.3, lanes: [1, 2] },
     ],
     corruptionWindows: [
-      { start: 6.8, end: 8.5, lane: 2 },
-      { start: 13.4, end: 15.2, lane: 0 },
-      { start: 21.6, end: 23.4, lane: 1 },
+      { start: 8.9, end: 10.0, lane: 2 },
+      { start: 17.4, end: 18.8, lane: 0 },
     ],
   },
 };
@@ -126,6 +107,16 @@ Object.values(LEVEL_DEFS).forEach((level) => {
     }));
   });
 });
+
+function createDefaultProgress() {
+  return {
+    completed: { level1: false, level2: false },
+    bestTimes: { level1: 0, level2: 0 },
+    clears: { level1: 0, level2: 0 },
+    mastery: { level1: false, level2: false },
+    rewards: { level1: 0, level2: 0 },
+  };
+}
 
 function loadProgress() {
   try {
@@ -143,13 +134,17 @@ function loadProgress() {
         level1: Number(parsed.clears?.level1 || 0),
         level2: Number(parsed.clears?.level2 || 0),
       },
+      mastery: {
+        level1: Boolean(parsed.mastery?.level1),
+        level2: Boolean(parsed.mastery?.level2),
+      },
+      rewards: {
+        level1: Number(parsed.rewards?.level1 || 0),
+        level2: Number(parsed.rewards?.level2 || 0),
+      },
     };
   } catch {
-    return {
-      completed: { level1: false, level2: false },
-      bestTimes: { level1: 0, level2: 0 },
-      clears: { level1: 0, level2: 0 },
-    };
+    return createDefaultProgress();
   }
 }
 
@@ -164,6 +159,8 @@ let touchStartX = null;
 let nextSpawnIndex = 0;
 let finishTime = 0;
 let lastDeathReason = 'Hit hazard';
+let autoAdvanceMessage = '';
+let lastRunMastered = false;
 
 function formatTime(time) {
   return `${time.toFixed(1)}s`;
@@ -173,15 +170,22 @@ function getLevel(id = currentLevelId) {
   return id ? LEVEL_DEFS[id] : null;
 }
 
+function getNextLevelId(id) {
+  const index = LEVEL_ORDER.indexOf(id);
+  return index >= 0 ? LEVEL_ORDER[index + 1] ?? null : null;
+}
+
 function isLevelUnlocked(id) {
-  if (id === 'level1') return !progress.completed.level1;
-  if (id === 'level2') return progress.completed.level1 && !progress.completed.level2;
+  if (id === 'level1') return true;
+  if (id === 'level2') return progress.completed.level1;
   return false;
 }
 
 function getLevelState(id) {
+  if (!isLevelUnlocked(id)) return 'locked';
+  if (progress.mastery[id]) return 'mastered';
   if (progress.completed[id]) return 'complete';
-  return isLevelUnlocked(id) ? 'open' : 'locked';
+  return 'open';
 }
 
 function saveProgress() {
@@ -202,10 +206,17 @@ function isLaneCorrupted(lane) {
   return Boolean(window && window.lane === lane);
 }
 
+function getRewardText(id) {
+  const stars = progress.rewards[id] || 0;
+  const badge = progress.mastery[id] ? ' + badge' : '';
+  return `${'★'.repeat(stars)}${stars ? badge : ''}` || 'No rewards yet';
+}
+
 function getProgressSummary() {
-  if (progress.completed.level2) return 'Both test levels are complete.';
-  if (progress.completed.level1) return 'Level 1 complete. Level 2 is now open.';
-  return 'Clear Level 1 to unlock Level 2.';
+  if (progress.mastery.level2) return 'Both early levels are cleared, and Level 2 is mastered.';
+  if (progress.completed.level2) return 'Both early levels are clear. Chase mastery if you want a cleaner finish.';
+  if (progress.completed.level1) return 'Level 1 clear banked. Level 2 is active now.';
+  return 'Start with Level 1. Clear moves you forward, mastery is extra.';
 }
 
 function renderLevelSelect() {
@@ -217,13 +228,14 @@ function renderLevelSelect() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `level-button is-${state}${currentLevelId === id ? ' is-selected' : ''}`;
-    button.disabled = state !== 'open';
+    button.disabled = state === 'locked';
     button.innerHTML = `
       <div class="level-meta">
         <strong>${level.name}</strong>
-        <span class="badge">${state === 'open' ? 'OPEN' : state === 'complete' ? 'DONE' : 'LOCKED'}</span>
+        <span class="badge">${state === 'open' ? 'OPEN' : state === 'complete' ? 'CLEAR' : state === 'mastered' ? 'MASTERED' : 'LOCKED'}</span>
       </div>
       <small>${level.blurb}</small>
+      <small class="level-subline">Reward: ${getRewardText(id)}</small>
     `;
     button.addEventListener('click', () => selectLevel(id));
     levelListEl.appendChild(button);
@@ -236,7 +248,7 @@ function updateHud() {
   const totalSpawns = level?.spawns.length ?? 0;
   const completed = level ? level.spawns.filter((spawn) => spawn.dodgeAt <= runTime).length : 0;
 
-  levelNameEl.textContent = level?.name ?? 'Select';
+  levelNameEl.textContent = level ? `${level.name} · ${level.title}` : 'Select';
   timeEl.textContent = formatTime(runTime);
   scoreEl.textContent = `${completed}/${totalSpawns}`;
   progressSummaryEl.textContent = getProgressSummary();
@@ -245,9 +257,9 @@ function updateHud() {
     bestEl.textContent = '0.0s • 0 clears';
     paceEl.textContent = '0%';
     corruptEl.textContent = 'SELECT A LEVEL';
-    goalTextEl.textContent = 'Pick a level to see its win condition.';
-    statusTextEl.textContent = 'Level 1 is open. Level 2 is locked.';
-    hintTextEl.textContent = 'Completed levels are retired and cannot be started again.';
+    goalTextEl.textContent = 'Pick a level to see clear and mastery goals.';
+    statusTextEl.textContent = 'Level 1 is open. Level 2 waits for your first clear.';
+    hintTextEl.textContent = 'Clear advances immediately. Mastery is optional and rewards a little extra.';
     restartBtn.disabled = true;
     return;
   }
@@ -255,25 +267,27 @@ function updateHud() {
   const bestTime = progress.bestTimes[level.id] || 0;
   const clears = progress.clears[level.id] || 0;
   bestEl.textContent = `${formatTime(bestTime)} • ${clears} clears`;
-  paceEl.textContent = gameState === 'won' ? 'LEVEL CLEAR' : `${Math.round((Math.min(runTime, level.duration) / level.duration) * 100)}%`;
-  goalTextEl.textContent = level.winText;
-  hintTextEl.textContent = level.hint;
+  paceEl.textContent = gameState === 'won' ? (lastRunMastered ? 'MASTERED' : 'LEVEL CLEAR') : `${Math.round((Math.min(runTime, level.duration) / level.duration) * 100)}%`;
+  goalTextEl.textContent = `Clear: ${level.clearGoal}`;
+  hintTextEl.textContent = `${level.hint} Reward: ${level.rewardText}`;
   restartBtn.disabled = false;
 
-  if (progress.completed[level.id]) {
-    statusTextEl.textContent = `${level.name} is completed and retired.`;
-  } else if (isLevelUnlocked(level.id)) {
-    statusTextEl.textContent = `${level.name} is open and playable.`;
-  } else {
+  if (!isLevelUnlocked(level.id)) {
     statusTextEl.textContent = `${level.name} is locked.`;
+  } else if (progress.mastery[level.id]) {
+    statusTextEl.textContent = `${level.name} mastered. Reward banked: ${getRewardText(level.id)}.`;
+  } else if (progress.completed[level.id]) {
+    statusTextEl.textContent = `${level.name} cleared. Bonus mastery is still available.`;
+  } else {
+    statusTextEl.textContent = `${level.name} is ready. Mastery target: ${level.masteryGoal}`;
   }
 
   if (gameState === 'select') {
     corruptEl.textContent = 'READY';
   } else if (gameState === 'ready') {
-    corruptEl.textContent = 'TAP TO START';
+    corruptEl.textContent = 'PRE-LEVEL';
   } else if (gameState === 'won') {
-    corruptEl.textContent = 'FINISH';
+    corruptEl.textContent = lastRunMastered ? 'MASTERED' : 'CLEAR';
   } else if (gameState === 'failed') {
     corruptEl.textContent = 'FAIL';
   } else if (activeCorruption) {
@@ -293,6 +307,7 @@ function setIdleStateFromSelection() {
   nextSpawnIndex = 0;
   finishTime = 0;
   lastDeathReason = 'Hit hazard';
+  lastRunMastered = false;
   renderLevelSelect();
   updateHud();
 }
@@ -300,12 +315,14 @@ function setIdleStateFromSelection() {
 function selectLevel(id) {
   if (!isLevelUnlocked(id)) return;
   currentLevelId = id;
+  autoAdvanceMessage = '';
   setIdleStateFromSelection();
 }
 
 function startRun() {
   if (gameState !== 'ready') return;
   if (!currentLevelId || !isLevelUnlocked(currentLevelId)) return;
+  autoAdvanceMessage = '';
   gameState = 'running';
   updateHud();
 }
@@ -342,12 +359,27 @@ function failRun(reason) {
 function winRun() {
   const level = getLevel();
   if (!level) return;
-  gameState = 'won';
+
   finishTime = runTime;
+  const masteredThisRun = finishTime <= level.masteryWindow;
+  lastRunMastered = masteredThisRun;
+
   progress.bestTimes[level.id] = Math.max(progress.bestTimes[level.id] || 0, finishTime);
-  progress.clears[level.id] = 1;
+  progress.clears[level.id] = Math.max(progress.clears[level.id] || 0, 1);
   progress.completed[level.id] = true;
+  progress.rewards[level.id] = Math.max(progress.rewards[level.id] || 0, masteredThisRun ? 2 : 1);
+  progress.mastery[level.id] = progress.mastery[level.id] || masteredThisRun;
   saveProgress();
+
+  const nextLevelId = getNextLevelId(level.id);
+  if (nextLevelId && isLevelUnlocked(nextLevelId)) {
+    currentLevelId = nextLevelId;
+    autoAdvanceMessage = `${level.name} clear banked. ${LEVEL_DEFS[nextLevelId].name} is active now.`;
+    setIdleStateFromSelection();
+    return;
+  }
+
+  gameState = 'won';
   renderLevelSelect();
   updateHud();
 }
@@ -488,7 +520,7 @@ function drawStatusText() {
   const activeCorruption = getCorruptionWindow();
   if (!level) {
     ctx.fillStyle = '#ffe26f';
-    ctx.fillText('Completed levels cannot be replayed', 18, HEIGHT - 54);
+    ctx.fillText('Clear opens the next route right away', 18, HEIGHT - 54);
   } else if (gameState === 'ready') {
     ctx.fillStyle = '#ffe26f';
     ctx.fillText(level.readyText, 18, HEIGHT - 54);
@@ -502,6 +534,16 @@ function drawStatusText() {
     ctx.fillStyle = '#c4d2ff';
     ctx.fillText(level.inRunText, 18, HEIGHT - 54);
   }
+}
+
+function drawPanel(x, y, width, height) {
+  ctx.fillStyle = 'rgba(10, 14, 26, 0.9)';
+  ctx.strokeStyle = 'rgba(125, 249, 255, 0.28)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, 22);
+  ctx.fill();
+  ctx.stroke();
 }
 
 function drawOverlay() {
@@ -519,20 +561,50 @@ function drawOverlay() {
     ctx.font = 'bold 30px system-ui';
     ctx.fillText('Select a level', WIDTH / 2, HEIGHT / 2 - 44);
     ctx.font = '20px system-ui';
-    ctx.fillText('Level 1 is your only open start', WIDTH / 2, HEIGHT / 2 - 8);
+    ctx.fillText('Level 1 is your soft onboarding start', WIDTH / 2, HEIGHT / 2 - 8);
     ctx.fillStyle = '#aab6d3';
-    ctx.fillText('Clear it once to unlock Level 2', WIDTH / 2, HEIGHT / 2 + 30);
+    ctx.fillText('Clear to move on, mastery for extra reward', WIDTH / 2, HEIGHT / 2 + 30);
     return;
   }
 
   if (gameState === 'ready' && level) {
-    ctx.font = 'bold 34px system-ui';
-    ctx.fillText(level.name, WIDTH / 2, HEIGHT / 2 - 56);
-    ctx.font = '20px system-ui';
-    ctx.fillText(level.winText, WIDTH / 2, HEIGHT / 2 - 20, WIDTH - 32);
-    ctx.fillText('Tap, swipe, or press a lane key to start', WIDTH / 2, HEIGHT / 2 + 18);
+    const panelX = 22;
+    const panelY = 120;
+    const panelWidth = WIDTH - 44;
+    const panelHeight = 280;
+    drawPanel(panelX, panelY, panelWidth, panelHeight);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#8cb1ff';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText(autoAdvanceMessage ? 'NEXT LEVEL READY' : 'PRE-LEVEL BRIEF', panelX + 22, panelY + 30);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 30px system-ui';
+    ctx.fillText(`${level.name} · ${level.title}`, panelX + 22, panelY + 68);
+
+    ctx.font = '17px system-ui';
+    ctx.fillStyle = '#d8e2ff';
+    ctx.fillText(level.blurb, panelX + 22, panelY + 98, panelWidth - 44);
+
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillStyle = '#9af7c2';
+    ctx.fillText(`Clear: ${level.clearGoal}`, panelX + 22, panelY + 140, panelWidth - 44);
+
+    ctx.fillStyle = '#ffe26f';
+    ctx.fillText(`Mastery: ${level.masteryGoal}`, panelX + 22, panelY + 184, panelWidth - 44);
+
+    ctx.fillStyle = '#7df9ff';
+    ctx.fillText(`Reward: ${level.rewardText}`, panelX + 22, panelY + 228, panelWidth - 44);
+
+    ctx.font = '16px system-ui';
     ctx.fillStyle = '#aab6d3';
-    ctx.fillText(level.blurb, WIDTH / 2, HEIGHT / 2 + 56, WIDTH - 48);
+    ctx.fillText(
+      autoAdvanceMessage || 'Tap, swipe, or press a lane key to start immediately',
+      panelX + 22,
+      panelY + 260,
+      panelWidth - 44,
+    );
     return;
   }
 
@@ -551,20 +623,15 @@ function drawOverlay() {
 
   if (gameState === 'won' && level) {
     ctx.font = 'bold 34px system-ui';
-    ctx.fillStyle = '#9af7c2';
-    ctx.fillText('Level Complete', WIDTH / 2, HEIGHT / 2 - 42);
+    ctx.fillStyle = lastRunMastered ? '#ffe26f' : '#9af7c2';
+    ctx.fillText(lastRunMastered ? 'Mastery Earned' : 'Level Clear', WIDTH / 2, HEIGHT / 2 - 42);
     ctx.font = '22px system-ui';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`Clear time ${formatTime(finishTime)}`, WIDTH / 2, HEIGHT / 2 - 2);
+    ctx.fillText(`Finish time ${formatTime(finishTime)}`, WIDTH / 2, HEIGHT / 2 - 2);
     ctx.fillStyle = '#aab6d3';
     ctx.font = '18px system-ui';
-    const nextOpen = LEVEL_ORDER.find((id) => isLevelUnlocked(id));
-    ctx.fillText(
-      nextOpen ? `${LEVEL_DEFS[nextOpen].name} is now open above` : 'Both levels are now complete',
-      WIDTH / 2,
-      HEIGHT / 2 + 38,
-    );
-    ctx.fillText('Completed levels cannot be started again', WIDTH / 2, HEIGHT / 2 + 70);
+    ctx.fillText(`Reward banked: ${getRewardText(level.id)}`, WIDTH / 2, HEIGHT / 2 + 38);
+    ctx.fillText('Press Space or Reset to replay the selected level', WIDTH / 2, HEIGHT / 2 + 70);
   }
 }
 
@@ -588,9 +655,10 @@ function frame(timestamp) {
 }
 
 function resetSelectedLevel() {
-  if (!currentLevelId || progress.completed[currentLevelId]) {
+  if (!currentLevelId) {
     currentLevelId = LEVEL_ORDER.find((id) => isLevelUnlocked(id)) ?? null;
   }
+  autoAdvanceMessage = '';
   setIdleStateFromSelection();
 }
 
