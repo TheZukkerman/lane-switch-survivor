@@ -16,9 +16,9 @@
         <div class="progression-copy">
           <span class="eyebrow">Prototype progression</span>
           <h1>Lane-Switch Survivor</h1>
-          <p id="progressSummary">Clear Level 1 to unlock Level 2.</p>
+          <p id="progressSummary">Start on Level 1 and move through a small route map.</p>
         </div>
-        <div class="level-list" id="levelList" aria-label="Level selection"></div>
+        <div class="world-map" id="worldMap" aria-label="World map progression"></div>
       </section>
 
       <header class="hud">
@@ -55,11 +55,33 @@
         </div>
         <div>
           <span class="label">Status</span>
-          <strong id="statusText">Level 1 is open. Level 2 is locked.</strong>
+          <strong id="statusText">Level 1 is open. Level 2 unlocks after your first clear.</strong>
         </div>
       </section>
 
-      <canvas id="game" width="360" height="640" aria-label="Lane-Switch Survivor" role="img"></canvas>
+      <section class="stage-shell">
+        <canvas id="game" width="360" height="640" aria-label="Lane-Switch Survivor" role="img"></canvas>
+        <aside class="run-card" aria-live="polite">
+          <span class="eyebrow" id="detailEyebrow">Route briefing</span>
+          <h2 id="detailTitle">Select a route</h2>
+          <p id="detailBody">Level 1 teaches the lane rhythm. Clear opens the next path.</p>
+          <div class="detail-stack">
+            <div>
+              <span class="label">Mastery</span>
+              <strong id="detailMastery">Optional extra credit for a cleaner run.</strong>
+            </div>
+            <div>
+              <span class="label">Reward</span>
+              <strong id="detailReward">1 star on clear, bonus for mastery.</strong>
+            </div>
+            <div>
+              <span class="label">Controls</span>
+              <strong id="detailControls">Tap left or right side, swipe, or use arrow keys.</strong>
+            </div>
+          </div>
+          <button id="startBtn" type="button">Start selected level</button>
+        </aside>
+      </section>
 
       <section class="controls">
         <button id="leftBtn" type="button">← Lane</button>

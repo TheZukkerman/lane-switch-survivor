@@ -27,7 +27,7 @@ body {
 }
 
 .app-shell {
-  width: min(100vw, 460px);
+  width: min(100vw, 960px);
   min-height: 100vh;
   min-height: 100dvh;
   padding: max(var(--page-padding), env(safe-area-inset-top)) var(--page-padding)
@@ -41,7 +41,8 @@ body {
 .progression-panel,
 .goal-card,
 .hud > div,
-.level-button {
+.world-node,
+.run-card {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
@@ -51,13 +52,14 @@ body {
   padding: 14px;
 }
 
-.progression-copy h1 {
+.progression-copy h1,
+.run-card h2 {
   margin: 4px 0 8px;
-  font-size: 1.3rem;
 }
 
 .progression-copy p,
-.hint {
+.hint,
+.run-card p {
   margin: 0;
   color: #aab6d3;
 }
@@ -70,70 +72,108 @@ body {
   margin-bottom: 4px;
 }
 
-.level-list {
-  margin-top: 12px;
+.world-map {
+  margin-top: 14px;
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
   gap: 10px;
 }
 
-.level-button {
+.world-node {
+  position: relative;
   width: 100%;
-  padding: 14px;
+  padding: 14px 12px 12px;
   text-align: left;
   background: rgba(255, 255, 255, 0.07);
+  min-height: 136px;
 }
 
-.level-button strong,
+.world-node:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 42px;
+  right: -10px;
+  width: 20px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(125, 249, 255, 0.7), rgba(125, 249, 255, 0.12));
+}
+
+.world-node strong,
 .goal-card strong,
-.hud strong {
+.hud strong,
+.run-card strong {
   display: block;
 }
 
-.level-button small {
-  display: block;
-  margin-top: 6px;
-  color: #c7d4ff;
-}
-
-.level-button .level-subline {
-  color: #8cb1ff;
-}
-
-.level-button .level-meta {
+.world-node .node-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.level-button .badge {
-  padding: 6px 10px;
+.node-number {
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
-  font-size: 0.76rem;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.08);
+  color: #dce7ff;
+}
+
+.world-node .badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
 
-.level-button.is-selected {
+.world-node p,
+.world-node small {
+  margin: 0;
+}
+
+.world-node small {
+  display: block;
+  margin-top: 8px;
+  color: #8cb1ff;
+}
+
+.world-node.is-selected {
   border-color: rgba(125, 249, 255, 0.7);
   box-shadow: 0 0 0 2px rgba(125, 249, 255, 0.18);
 }
 
-.level-button.is-open .badge {
+.world-node.is-open .badge,
+.world-node.is-selected .node-number {
   background: rgba(125, 249, 255, 0.16);
   color: #7df9ff;
 }
 
-.level-button.is-complete .badge {
+.world-node.is-complete .badge,
+.world-node.is-complete .node-number {
   background: rgba(154, 247, 194, 0.16);
   color: #9af7c2;
 }
 
-.level-button.is-locked {
-  opacity: 0.62;
+.world-node.is-mastered .badge,
+.world-node.is-mastered .node-number {
+  background: rgba(255, 226, 111, 0.16);
+  color: #ffe26f;
 }
 
-.level-button.is-locked .badge {
+.world-node.is-locked {
+  opacity: 0.58;
+}
+
+.world-node.is-locked .badge,
+.world-node.is-locked .node-number {
   background: rgba(255, 177, 177, 0.12);
   color: #ffb1b1;
 }
@@ -148,11 +188,12 @@ body {
 
 .hud {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .hud > div,
-.goal-card {
+.goal-card,
+.run-card {
   min-width: 0;
   padding: 10px 12px;
 }
@@ -163,21 +204,40 @@ body {
 }
 
 .hud strong,
-.goal-card strong {
+.goal-card strong,
+.run-card strong {
   font-size: 0.96rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.stage-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
 #game {
   width: 100%;
   height: auto;
-  max-height: calc(100dvh - 380px);
   display: block;
   border-radius: 20px;
   background: linear-gradient(180deg, #151b31 0%, #0d1020 100%);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   touch-action: none;
+}
+
+.run-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.detail-stack {
+  display: grid;
+  gap: 12px;
 }
 
 button {
@@ -211,20 +271,42 @@ button:disabled {
   font-size: 0.92rem;
 }
 
+@media (max-width: 860px) {
+  .app-shell {
+    width: min(100vw, 460px);
+  }
+
+  .world-map,
+  .stage-shell,
+  .hud,
+  .goal-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stage-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 520px) {
   .app-shell {
     width: 100%;
   }
 
-  #game {
-    border-radius: 18px;
-    max-height: calc(100dvh - 420px);
-  }
-
+  .world-map,
   .hud,
   .goal-card {
-    gap: 10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .world-node:not(:last-child)::after {
+    top: auto;
+    right: auto;
+    left: 29px;
+    bottom: -10px;
+    width: 3px;
+    height: 20px;
+    background: linear-gradient(180deg, rgba(125, 249, 255, 0.7), rgba(125, 249, 255, 0.12));
   }
 
   .controls {

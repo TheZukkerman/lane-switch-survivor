@@ -10,10 +10,17 @@ const goalTextEl = document.getElementById('goalText');
 const statusTextEl = document.getElementById('statusText');
 const progressSummaryEl = document.getElementById('progressSummary');
 const hintTextEl = document.getElementById('hintText');
-const levelListEl = document.getElementById('levelList');
+const worldMapEl = document.getElementById('worldMap');
+const detailEyebrowEl = document.getElementById('detailEyebrow');
+const detailTitleEl = document.getElementById('detailTitle');
+const detailBodyEl = document.getElementById('detailBody');
+const detailMasteryEl = document.getElementById('detailMastery');
+const detailRewardEl = document.getElementById('detailReward');
+const detailControlsEl = document.getElementById('detailControls');
 const leftBtn = document.getElementById('leftBtn');
 const rightBtn = document.getElementById('rightBtn');
 const restartBtn = document.getElementById('restartBtn');
+const startBtn = document.getElementById('startBtn');
 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
@@ -25,23 +32,24 @@ const HAZARD_WIDTH = laneWidth * 0.56;
 const HAZARD_HEIGHT = 56;
 const HAZARD_SPEED = 298;
 const HAZARD_TRAVEL_TIME = (playerY + playerRadius + HAZARD_HEIGHT) / HAZARD_SPEED;
-const STORAGE_KEY = 'laneSwitchProgressV3';
-const LEVEL_ORDER = ['level1', 'level2'];
+const STORAGE_KEY = 'laneSwitchProgressV4';
+const LEVEL_ORDER = ['level1', 'level2', 'level3'];
 
 const LEVEL_DEFS = {
   level1: {
     id: 'level1',
+    index: 1,
     name: 'Level 1',
     title: 'Warm-Up Route',
     duration: 18,
-    blurb: 'A gentle first route with roomy gaps so the player learns lane timing without pressure.',
+    blurb: 'A gentle first route. Learn lane timing, read single threats, and meet one soft two-lane beat.',
     clearGoal: 'Survive to the end of the route.',
-    masteryGoal: 'Finish with at least 3.0 seconds of buffer before any panic hit would have happened.',
-    rewardText: 'Clear earns 1 star. Mastery upgrades it to a gold star.',
-    hint: 'Level 1 is meant to teach the rhythm. Start moving early, not late.',
-    readyText: 'Easy onboarding route',
-    inRunText: 'Learn the lane rhythm and stay calm',
-    completeText: 'Level 1 clear secured. Level 2 is up next.',
+    masteryGoal: 'Finish with a clean, calm rhythm and beat the 16.5s mastery target.',
+    rewardText: 'Clear earns 1 star. Mastery upgrades it to a gold route marker.',
+    hint: 'Start moving before the block is on top of you. Early reads are the whole lesson.',
+    readyText: 'Onboarding route. Very readable pressure.',
+    inRunText: 'Stay loose, read early, and get used to the lane spacing.',
+    completeText: 'Level 1 clear secured. The next route opens immediately.',
     masteryWindow: 16.5,
     events: [
       { dodgeAt: 2.8, lane: 1 },
@@ -59,17 +67,18 @@ const LEVEL_DEFS = {
   },
   level2: {
     id: 'level2',
+    index: 2,
     name: 'Level 2',
-    title: 'Steadier Pressure',
+    title: 'River Bend',
     duration: 22,
-    blurb: 'Still fair, but the reads come faster and a few lane traps ask for cleaner commitment.',
-    clearGoal: 'Survive the full route with the denser pattern.',
-    masteryGoal: 'Finish in one run without dropping a late save, plus hold pace through the final wave.',
-    rewardText: 'Clear earns 1 star. Mastery adds a badge and completes the slice cleanly.',
-    hint: 'This should feel like the same game, just with less breathing room.',
-    readyText: 'Slightly faster pressure route',
-    inRunText: 'Commit earlier and respect the two-lane beats',
-    completeText: 'Level 2 clear secured. That is the current soft progression arc.',
+    blurb: 'Same rules, slightly tighter reads. The route starts threading small traps and denser beats.',
+    clearGoal: 'Survive the full route with faster pressure and more committed swaps.',
+    masteryGoal: 'Stay clean through the final wave and beat the 20.2s mastery target.',
+    rewardText: 'Clear earns 1 star. Mastery upgrades the route marker and completes the bend cleanly.',
+    hint: 'This should still feel fair. The jump is mostly reduced breathing room, not chaos.',
+    readyText: 'Step up route. Less drift, more commitment.',
+    inRunText: 'Commit earlier and respect the two-lane beats.',
+    completeText: 'Level 2 clear secured. One more route is waiting up the road.',
     masteryWindow: 20.2,
     events: [
       { dodgeAt: 2.4, lane: 1 },
@@ -95,6 +104,52 @@ const LEVEL_DEFS = {
       { start: 17.4, end: 18.8, lane: 0 },
     ],
   },
+  level3: {
+    id: 'level3',
+    index: 3,
+    name: 'Level 3',
+    title: 'Sky Bridge',
+    duration: 25,
+    blurb: 'A real third step, not a spike. More tempo, more lane traps, and a finish that asks for planning.',
+    clearGoal: 'Hold through the full bridge route and keep control during the layered ending.',
+    masteryGoal: 'Beat the 22.7s mastery target while staying ahead of the corruption swings.',
+    rewardText: 'Clear earns 1 star. Mastery turns the whole early world map gold.',
+    hint: 'Think one beat ahead. The final section rewards committed positioning, not panic flicks.',
+    readyText: 'Third route. Noticeably sharper, still readable.',
+    inRunText: 'Read one beat ahead and set up the next safe lane early.',
+    completeText: 'Level 3 clear secured. The first mini-world is complete.',
+    masteryWindow: 22.7,
+    events: [
+      { dodgeAt: 2.2, lane: 1 },
+      { dodgeAt: 3.2, lane: 0 },
+      { dodgeAt: 4.2, lane: 2 },
+      { dodgeAt: 5.1, lanes: [0, 1] },
+      { dodgeAt: 6.1, lane: 2 },
+      { dodgeAt: 7.0, lane: 1 },
+      { dodgeAt: 7.9, lanes: [1, 2] },
+      { dodgeAt: 8.9, lane: 0 },
+      { dodgeAt: 9.8, lanes: [0, 2] },
+      { dodgeAt: 11.0, lane: 1 },
+      { dodgeAt: 12.0, lane: 2 },
+      { dodgeAt: 13.0, lanes: [0, 1] },
+      { dodgeAt: 14.1, lane: 2 },
+      { dodgeAt: 15.1, lane: 0 },
+      { dodgeAt: 16.0, lanes: [1, 2] },
+      { dodgeAt: 17.1, lane: 0 },
+      { dodgeAt: 18.0, lane: 1 },
+      { dodgeAt: 18.9, lanes: [0, 2] },
+      { dodgeAt: 20.0, lane: 1 },
+      { dodgeAt: 20.9, lanes: [0, 1] },
+      { dodgeAt: 21.9, lane: 2 },
+      { dodgeAt: 22.8, lanes: [1, 2] },
+      { dodgeAt: 23.8, lane: 0 },
+    ],
+    corruptionWindows: [
+      { start: 6.7, end: 7.8, lane: 0 },
+      { start: 12.7, end: 14.0, lane: 2 },
+      { start: 19.7, end: 21.0, lane: 1 },
+    ],
+  },
 };
 
 Object.values(LEVEL_DEFS).forEach((level) => {
@@ -108,40 +163,34 @@ Object.values(LEVEL_DEFS).forEach((level) => {
   });
 });
 
+function keyedZeroes() {
+  return Object.fromEntries(LEVEL_ORDER.map((id) => [id, 0]));
+}
+
+function keyedFalse() {
+  return Object.fromEntries(LEVEL_ORDER.map((id) => [id, false]));
+}
+
 function createDefaultProgress() {
   return {
-    completed: { level1: false, level2: false },
-    bestTimes: { level1: 0, level2: 0 },
-    clears: { level1: 0, level2: 0 },
-    mastery: { level1: false, level2: false },
-    rewards: { level1: 0, level2: 0 },
+    completed: keyedFalse(),
+    bestTimes: keyedZeroes(),
+    clears: keyedZeroes(),
+    mastery: keyedFalse(),
+    rewards: keyedZeroes(),
   };
 }
 
 function loadProgress() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    const defaults = createDefaultProgress();
     return {
-      completed: {
-        level1: Boolean(parsed.completed?.level1),
-        level2: Boolean(parsed.completed?.level2),
-      },
-      bestTimes: {
-        level1: Number(parsed.bestTimes?.level1 || 0),
-        level2: Number(parsed.bestTimes?.level2 || 0),
-      },
-      clears: {
-        level1: Number(parsed.clears?.level1 || 0),
-        level2: Number(parsed.clears?.level2 || 0),
-      },
-      mastery: {
-        level1: Boolean(parsed.mastery?.level1),
-        level2: Boolean(parsed.mastery?.level2),
-      },
-      rewards: {
-        level1: Number(parsed.rewards?.level1 || 0),
-        level2: Number(parsed.rewards?.level2 || 0),
-      },
+      completed: Object.fromEntries(LEVEL_ORDER.map((id) => [id, Boolean(parsed.completed?.[id])])),
+      bestTimes: Object.fromEntries(LEVEL_ORDER.map((id) => [id, Number(parsed.bestTimes?.[id] || defaults.bestTimes[id])])),
+      clears: Object.fromEntries(LEVEL_ORDER.map((id) => [id, Number(parsed.clears?.[id] || defaults.clears[id])])),
+      mastery: Object.fromEntries(LEVEL_ORDER.map((id) => [id, Boolean(parsed.mastery?.[id])])),
+      rewards: Object.fromEntries(LEVEL_ORDER.map((id) => [id, Number(parsed.rewards?.[id] || defaults.rewards[id])])),
     };
   } catch {
     return createDefaultProgress();
@@ -176,9 +225,9 @@ function getNextLevelId(id) {
 }
 
 function isLevelUnlocked(id) {
-  if (id === 'level1') return true;
-  if (id === 'level2') return progress.completed.level1;
-  return false;
+  const index = LEVEL_ORDER.indexOf(id);
+  if (index <= 0) return true;
+  return progress.completed[LEVEL_ORDER[index - 1]];
 }
 
 function getLevelState(id) {
@@ -208,38 +257,80 @@ function isLaneCorrupted(lane) {
 
 function getRewardText(id) {
   const stars = progress.rewards[id] || 0;
-  const badge = progress.mastery[id] ? ' + badge' : '';
-  return `${'★'.repeat(stars)}${stars ? badge : ''}` || 'No rewards yet';
+  if (!stars) return 'No route stars yet';
+  return `${'★'.repeat(stars)}${progress.mastery[id] ? ' + gold marker' : ''}`;
 }
 
 function getProgressSummary() {
-  if (progress.mastery.level2) return 'Both early levels are cleared, and Level 2 is mastered.';
-  if (progress.completed.level2) return 'Both early levels are clear. Chase mastery if you want a cleaner finish.';
-  if (progress.completed.level1) return 'Level 1 clear banked. Level 2 is active now.';
-  return 'Start with Level 1. Clear moves you forward, mastery is extra.';
+  const clearedCount = LEVEL_ORDER.filter((id) => progress.completed[id]).length;
+  if (progress.mastery.level3) return 'All three early routes are cleared and mastered. The mini world map now feels complete.';
+  if (progress.completed.level3) return 'Three routes are clear. Replay for mastery and check if the progression arc feels right.';
+  if (progress.completed.level2) return 'Level 3 is unlocked. This should feel like the last step of the opening world.';
+  if (progress.completed.level1) return 'Level 2 is open and the route map has started to unfold.';
+  return 'Start at Level 1. Each clear opens the next stop on the route.';
 }
 
-function renderLevelSelect() {
-  levelListEl.innerHTML = '';
+function renderWorldMap() {
+  worldMapEl.innerHTML = '';
 
   LEVEL_ORDER.forEach((id) => {
     const level = getLevel(id);
     const state = getLevelState(id);
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `level-button is-${state}${currentLevelId === id ? ' is-selected' : ''}`;
+    button.className = `world-node is-${state}${currentLevelId === id ? ' is-selected' : ''}`;
     button.disabled = state === 'locked';
     button.innerHTML = `
-      <div class="level-meta">
-        <strong>${level.name}</strong>
+      <div class="node-top">
+        <span class="node-number">${level.index}</span>
         <span class="badge">${state === 'open' ? 'OPEN' : state === 'complete' ? 'CLEAR' : state === 'mastered' ? 'MASTERED' : 'LOCKED'}</span>
       </div>
-      <small>${level.blurb}</small>
-      <small class="level-subline">Reward: ${getRewardText(id)}</small>
+      <strong>${level.title}</strong>
+      <p>${level.blurb}</p>
+      <small>${getRewardText(id)}</small>
     `;
     button.addEventListener('click', () => selectLevel(id));
-    levelListEl.appendChild(button);
+    worldMapEl.appendChild(button);
   });
+}
+
+function updateSideCard() {
+  const level = getLevel();
+
+  if (!level) {
+    detailEyebrowEl.textContent = 'Route briefing';
+    detailTitleEl.textContent = 'Select a route';
+    detailBodyEl.textContent = 'Level 1 teaches the lane rhythm. Clear it to open the next road segment.';
+    detailMasteryEl.textContent = 'Optional extra credit for a cleaner run.';
+    detailRewardEl.textContent = '1 star on clear, bonus on mastery.';
+    detailControlsEl.textContent = 'Tap left or right side, swipe, or use arrow keys.';
+    startBtn.disabled = true;
+    startBtn.textContent = 'Select a level first';
+    return;
+  }
+
+  const state = getLevelState(level.id);
+  detailEyebrowEl.textContent =
+    gameState === 'running' ? 'Route live' : gameState === 'failed' ? 'Run failed' : gameState === 'won' ? 'Route complete' : autoAdvanceMessage ? 'Next route ready' : 'Route briefing';
+  detailTitleEl.textContent = `${level.name} · ${level.title}`;
+
+  if (gameState === 'failed') {
+    detailBodyEl.textContent = `${lastDeathReason}. You made it ${formatTime(runTime)}. Reset and test the read again.`;
+  } else if (gameState === 'won') {
+    detailBodyEl.textContent = lastRunMastered
+      ? `Mastery earned at ${formatTime(finishTime)}. This route now reads as solved cleanly.`
+      : `Clear banked at ${formatTime(finishTime)}. The route works, but mastery is still there if you want a cleaner line.`;
+  } else if (gameState === 'running') {
+    detailBodyEl.textContent = level.inRunText;
+  } else {
+    detailBodyEl.textContent = autoAdvanceMessage || level.blurb;
+  }
+
+  detailMasteryEl.textContent = level.masteryGoal;
+  detailRewardEl.textContent = `${level.rewardText} Current reward: ${getRewardText(level.id)}.`;
+  detailControlsEl.textContent = gameState === 'running' ? 'Stay in motion. Left and right inputs move immediately.' : 'Tap start, then tap sides, swipe, or use arrow keys.';
+  startBtn.disabled = !isLevelUnlocked(level.id) || gameState === 'running';
+  startBtn.textContent = gameState === 'running' ? 'Run in progress' : gameState === 'won' || gameState === 'failed' ? 'Replay selected level' : 'Start selected level';
 }
 
 function updateHud() {
@@ -257,10 +348,11 @@ function updateHud() {
     bestEl.textContent = '0.0s • 0 clears';
     paceEl.textContent = '0%';
     corruptEl.textContent = 'SELECT A LEVEL';
-    goalTextEl.textContent = 'Pick a level to see clear and mastery goals.';
-    statusTextEl.textContent = 'Level 1 is open. Level 2 waits for your first clear.';
-    hintTextEl.textContent = 'Clear advances immediately. Mastery is optional and rewards a little extra.';
+    goalTextEl.textContent = 'Pick a route to see clear and mastery goals.';
+    statusTextEl.textContent = 'Level 1 is open. The rest of the road unlocks one clear at a time.';
+    hintTextEl.textContent = 'This pass is about feeling a tiny world map, three real levels, and cleaner route briefings.';
     restartBtn.disabled = true;
+    updateSideCard();
     return;
   }
 
@@ -277,15 +369,15 @@ function updateHud() {
   } else if (progress.mastery[level.id]) {
     statusTextEl.textContent = `${level.name} mastered. Reward banked: ${getRewardText(level.id)}.`;
   } else if (progress.completed[level.id]) {
-    statusTextEl.textContent = `${level.name} cleared. Bonus mastery is still available.`;
+    statusTextEl.textContent = `${level.name} cleared. Replay it or move further up the route.`;
   } else {
     statusTextEl.textContent = `${level.name} is ready. Mastery target: ${level.masteryGoal}`;
   }
 
   if (gameState === 'select') {
-    corruptEl.textContent = 'READY';
+    corruptEl.textContent = 'SELECT A LEVEL';
   } else if (gameState === 'ready') {
-    corruptEl.textContent = 'PRE-LEVEL';
+    corruptEl.textContent = 'READY';
   } else if (gameState === 'won') {
     corruptEl.textContent = lastRunMastered ? 'MASTERED' : 'CLEAR';
   } else if (gameState === 'failed') {
@@ -295,6 +387,9 @@ function updateHud() {
   } else {
     corruptEl.textContent = 'STABLE';
   }
+
+  renderWorldMap();
+  updateSideCard();
 }
 
 function setIdleStateFromSelection() {
@@ -308,7 +403,6 @@ function setIdleStateFromSelection() {
   finishTime = 0;
   lastDeathReason = 'Hit hazard';
   lastRunMastered = false;
-  renderLevelSelect();
   updateHud();
 }
 
@@ -320,8 +414,11 @@ function selectLevel(id) {
 }
 
 function startRun() {
-  if (gameState !== 'ready') return;
   if (!currentLevelId || !isLevelUnlocked(currentLevelId)) return;
+  if (gameState === 'running') return;
+  if (gameState === 'won' || gameState === 'failed') {
+    resetSelectedLevel();
+  }
   autoAdvanceMessage = '';
   gameState = 'running';
   updateHud();
@@ -365,7 +462,7 @@ function winRun() {
   lastRunMastered = masteredThisRun;
 
   progress.bestTimes[level.id] = Math.max(progress.bestTimes[level.id] || 0, finishTime);
-  progress.clears[level.id] = Math.max(progress.clears[level.id] || 0, 1);
+  progress.clears[level.id] = (progress.clears[level.id] || 0) + 1;
   progress.completed[level.id] = true;
   progress.rewards[level.id] = Math.max(progress.rewards[level.id] || 0, masteredThisRun ? 2 : 1);
   progress.mastery[level.id] = progress.mastery[level.id] || masteredThisRun;
@@ -374,13 +471,12 @@ function winRun() {
   const nextLevelId = getNextLevelId(level.id);
   if (nextLevelId && isLevelUnlocked(nextLevelId)) {
     currentLevelId = nextLevelId;
-    autoAdvanceMessage = `${level.name} clear banked. ${LEVEL_DEFS[nextLevelId].name} is active now.`;
+    autoAdvanceMessage = `${level.name} clear banked. ${LEVEL_DEFS[nextLevelId].title} is now connected on the route map.`;
     setIdleStateFromSelection();
     return;
   }
 
   gameState = 'won';
-  renderLevelSelect();
   updateHud();
 }
 
@@ -435,12 +531,16 @@ function update(delta) {
 
 function drawBackground() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
-
-  ctx.fillStyle = '#12182c';
+  const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+  gradient.addColorStop(0, '#151b31');
+  gradient.addColorStop(1, '#0d1020');
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   for (let lane = 0; lane < LANE_COUNT; lane += 1) {
     const x = lane * laneWidth;
+    ctx.fillStyle = lane % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)';
+    ctx.fillRect(x, 0, laneWidth, HEIGHT);
 
     if (isLaneCorrupted(lane)) {
       ctx.fillStyle = 'rgba(181, 79, 255, 0.22)';
@@ -449,11 +549,6 @@ function drawBackground() {
       ctx.strokeStyle = 'rgba(255, 150, 228, 0.75)';
       ctx.lineWidth = 4;
       ctx.strokeRect(x + 6, 6, laneWidth - 12, HEIGHT - 12);
-
-      ctx.fillStyle = '#ffd5f2';
-      ctx.font = 'bold 16px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText('CORRUPTED', x + laneWidth / 2, 32);
     }
   }
 
@@ -512,15 +607,15 @@ function drawStatusText() {
   ctx.textAlign = 'left';
   ctx.font = 'bold 18px system-ui';
   ctx.fillStyle = '#d7e2ff';
-  ctx.fillText(level?.name ?? 'Level Select', 18, HEIGHT - 106);
+  ctx.fillText(level?.title ?? 'Route Map', 18, HEIGHT - 106);
 
   ctx.fillStyle = '#9eb3ff';
-  ctx.fillText(level ? `Sequence ${level.spawns.length} beats` : 'Choose an open level above', 18, HEIGHT - 80);
+  ctx.fillText(level ? `${level.spawns.length} beats on this route` : 'Choose an open route above', 18, HEIGHT - 80);
 
   const activeCorruption = getCorruptionWindow();
   if (!level) {
     ctx.fillStyle = '#ffe26f';
-    ctx.fillText('Clear opens the next route right away', 18, HEIGHT - 54);
+    ctx.fillText('Clear routes to extend the map', 18, HEIGHT - 54);
   } else if (gameState === 'ready') {
     ctx.fillStyle = '#ffe26f';
     ctx.fillText(level.readyText, 18, HEIGHT - 54);
@@ -530,109 +625,35 @@ function drawStatusText() {
   } else if (gameState === 'won') {
     ctx.fillStyle = '#9af7c2';
     ctx.fillText(level.completeText, 18, HEIGHT - 54);
+  } else if (gameState === 'failed') {
+    ctx.fillStyle = '#ffb7ca';
+    ctx.fillText(lastDeathReason, 18, HEIGHT - 54);
   } else {
     ctx.fillStyle = '#c4d2ff';
     ctx.fillText(level.inRunText, 18, HEIGHT - 54);
   }
 }
 
-function drawPanel(x, y, width, height) {
-  ctx.fillStyle = 'rgba(10, 14, 26, 0.9)';
-  ctx.strokeStyle = 'rgba(125, 249, 255, 0.28)';
-  ctx.lineWidth = 2;
+function drawBanner(text, accent) {
+  ctx.fillStyle = 'rgba(4, 6, 12, 0.78)';
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, 22);
+  ctx.roundRect(20, 18, WIDTH - 40, 56, 18);
   ctx.fill();
+
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2;
   ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = accent;
+  ctx.font = 'bold 20px system-ui';
+  ctx.fillText(text, WIDTH / 2, 53);
 }
 
 function drawOverlay() {
-  if (gameState === 'running') return;
-
-  const level = getLevel();
-
-  ctx.fillStyle = 'rgba(4, 6, 12, 0.72)';
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffffff';
-
-  if (gameState === 'select') {
-    ctx.font = 'bold 30px system-ui';
-    ctx.fillText('Select a level', WIDTH / 2, HEIGHT / 2 - 44);
-    ctx.font = '20px system-ui';
-    ctx.fillText('Level 1 is your soft onboarding start', WIDTH / 2, HEIGHT / 2 - 8);
-    ctx.fillStyle = '#aab6d3';
-    ctx.fillText('Clear to move on, mastery for extra reward', WIDTH / 2, HEIGHT / 2 + 30);
-    return;
-  }
-
-  if (gameState === 'ready' && level) {
-    const panelX = 22;
-    const panelY = 120;
-    const panelWidth = WIDTH - 44;
-    const panelHeight = 280;
-    drawPanel(panelX, panelY, panelWidth, panelHeight);
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#8cb1ff';
-    ctx.font = 'bold 14px system-ui';
-    ctx.fillText(autoAdvanceMessage ? 'NEXT LEVEL READY' : 'PRE-LEVEL BRIEF', panelX + 22, panelY + 30);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 30px system-ui';
-    ctx.fillText(`${level.name} · ${level.title}`, panelX + 22, panelY + 68);
-
-    ctx.font = '17px system-ui';
-    ctx.fillStyle = '#d8e2ff';
-    ctx.fillText(level.blurb, panelX + 22, panelY + 98, panelWidth - 44);
-
-    ctx.font = 'bold 16px system-ui';
-    ctx.fillStyle = '#9af7c2';
-    ctx.fillText(`Clear: ${level.clearGoal}`, panelX + 22, panelY + 140, panelWidth - 44);
-
-    ctx.fillStyle = '#ffe26f';
-    ctx.fillText(`Mastery: ${level.masteryGoal}`, panelX + 22, panelY + 184, panelWidth - 44);
-
-    ctx.fillStyle = '#7df9ff';
-    ctx.fillText(`Reward: ${level.rewardText}`, panelX + 22, panelY + 228, panelWidth - 44);
-
-    ctx.font = '16px system-ui';
-    ctx.fillStyle = '#aab6d3';
-    ctx.fillText(
-      autoAdvanceMessage || 'Tap, swipe, or press a lane key to start immediately',
-      panelX + 22,
-      panelY + 260,
-      panelWidth - 44,
-    );
-    return;
-  }
-
-  if (gameState === 'failed') {
-    ctx.font = 'bold 34px system-ui';
-    ctx.fillText('Fail', WIDTH / 2, HEIGHT / 2 - 42);
-    ctx.font = '22px system-ui';
-    ctx.fillText(`Made it ${formatTime(runTime)}`, WIDTH / 2, HEIGHT / 2 - 4);
-    ctx.fillStyle = '#ffb7ca';
-    ctx.fillText(lastDeathReason, WIDTH / 2, HEIGHT / 2 + 32);
-    ctx.fillStyle = '#aab6d3';
-    ctx.font = '18px system-ui';
-    ctx.fillText('Tap Reset or press Space to try again', WIDTH / 2, HEIGHT / 2 + 70);
-    return;
-  }
-
-  if (gameState === 'won' && level) {
-    ctx.font = 'bold 34px system-ui';
-    ctx.fillStyle = lastRunMastered ? '#ffe26f' : '#9af7c2';
-    ctx.fillText(lastRunMastered ? 'Mastery Earned' : 'Level Clear', WIDTH / 2, HEIGHT / 2 - 42);
-    ctx.font = '22px system-ui';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(`Finish time ${formatTime(finishTime)}`, WIDTH / 2, HEIGHT / 2 - 2);
-    ctx.fillStyle = '#aab6d3';
-    ctx.font = '18px system-ui';
-    ctx.fillText(`Reward banked: ${getRewardText(level.id)}`, WIDTH / 2, HEIGHT / 2 + 38);
-    ctx.fillText('Press Space or Reset to replay the selected level', WIDTH / 2, HEIGHT / 2 + 70);
-  }
+  if (gameState === 'ready') drawBanner('Ready. Start from the side card or move to launch.', '#7df9ff');
+  if (gameState === 'failed') drawBanner('Fail. Reset or start again from the side card.', '#ff8db1');
+  if (gameState === 'won') drawBanner(lastRunMastered ? 'Mastery earned.' : 'Route clear.', lastRunMastered ? '#ffe26f' : '#9af7c2');
 }
 
 function draw() {
@@ -665,11 +686,13 @@ function resetSelectedLevel() {
 leftBtn.addEventListener('click', () => moveLane(-1));
 rightBtn.addEventListener('click', () => moveLane(1));
 restartBtn.addEventListener('click', resetSelectedLevel);
+startBtn.addEventListener('click', startRun);
 
 window.addEventListener('keydown', (event) => {
   const key = event.key.toLowerCase();
   if (event.key === 'ArrowLeft' || key === 'a') moveLane(-1);
   if (event.key === 'ArrowRight' || key === 'd') moveLane(1);
+  if (event.key === 'Enter' && gameState !== 'running') startRun();
   if (event.key === ' ' && gameState !== 'running') resetSelectedLevel();
 });
 
@@ -703,5 +726,6 @@ canvas.addEventListener('pointercancel', () => {
 });
 
 currentLevelId = LEVEL_ORDER.find((id) => isLevelUnlocked(id)) ?? null;
+renderWorldMap();
 setIdleStateFromSelection();
 requestAnimationFrame(frame);
