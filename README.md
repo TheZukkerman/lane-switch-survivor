@@ -34,6 +34,16 @@ flutter run
 
 If a device is connected, Flutter will install and launch the build.
 
+### Windows + WSL USB attach helper
+
+If Android deploys are driven from WSL but the phone is physically attached to Windows, use the narrow helper in:
+
+- `tools/windows/android-usbipd/`
+
+It provides an Android-only `usbipd` attach flow, documented here:
+
+- `tools/windows/android-usbipd/README.md`
+
 ### Build APK
 
 ```bash
