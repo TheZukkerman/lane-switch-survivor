@@ -11,6 +11,8 @@ What is in the first slice:
 - 3 lanes
 - touch lane switching by tap or swipe
 - 3 obstacle feels: light block, heavy block, double-lane pressure pattern
+- corrupted lane windows with clear visual marking
+- corrupted lane risk/reward: extra score while active, but staying there too long overloads and kills the run
 - clear / fail states
 - direct retry loop
 - result state with time left, clean dodges, close calls, and 1 to 3 stars
@@ -54,8 +56,10 @@ flutter_app/build/app/outputs/flutter-apk/app-debug.apk
 
 ## Web prototype
 
-The earlier browser prototype is still here for reference:
+The browser prototype is still here for fast iteration and playtests. Current focus: does corrupted-lane risk/reward make lane choice feel meaningfully more interesting?
 
 ```bash
-./playtest.sh
+./serve-mobile.sh
 ```
+
+Then open `http://localhost:4173` locally, or the LAN URL printed by the script on mobile.

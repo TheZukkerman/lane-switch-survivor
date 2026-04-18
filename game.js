@@ -32,6 +32,10 @@ const HAZARD_WIDTH = laneWidth * 0.56;
 const HAZARD_HEIGHT = 56;
 const HAZARD_SPEED = 298;
 const HAZARD_TRAVEL_TIME = (playerY + playerRadius + HAZARD_HEIGHT) / HAZARD_SPEED;
+const BASE_SCORE_PER_SECOND = 10;
+const CORRUPTED_BONUS_PER_SECOND = 28;
+const CORRUPTION_MAX_EXPOSURE = 1.05;
+const CORRUPTION_RECOVER_PER_SECOND = 1.7;
 const STORAGE_KEY = 'laneSwitchProgressV5';
 const LEVEL_ORDER = ['level1', 'level2', 'level3'];
 const MAP_NODE_LAYOUT = {
@@ -207,6 +211,8 @@ let currentLevelId = null;
 let currentLane = 1;
 let hazards = [];
 let runTime = 0;
+let score = 0;
+let corruptionExposure = 0;
 let gameState = 'select';
 let lastFrame = 0;
 let touchStartX = null;
@@ -218,6 +224,10 @@ let lastRunMastered = false;
 
 function formatTime(time) {
   return `${time.toFixed(1)}s`;
+}
+
+function formatScore(value) {
+  return `${Math.floor(value)}`;
 }
 
 function getLevel(id = currentLevelId) {
@@ -388,12 +398,12 @@ function updateHud() {
 
   levelNameEl.textContent = level ? `${level.name} · ${level.title}` : 'Select';
   timeEl.textContent = formatTime(runTime);
-  scoreEl.textContent = `${completed}/${totalSpawns}`;
+  scoreEl.textContent = formatScore(score);
   progressSummaryEl.textContent = getProgressSummary();
 
   if (!level) {
     bestEl.textContent = '0.0s • 0 clears';
-    paceEl.textContent = '0%';
+    paceEl.textContent = '0% route';
     corruptEl.textContent = 'SELECT A LEVEL';
     goalTextEl.textContent = 'Välj en nod för att se clear- och mastery-mål.';
     statusTextEl.textContent = 'Lägerelden är öppen. Resten av vägen låses upp en klarad nod i taget.';
@@ -406,7 +416,7 @@ function updateHud() {
   const bestTime = progress.bestTimes[level.id] || 0;
   const clears = progress.clears[level.id] || 0;
   bestEl.textContent = `${formatTime(bestTime)} • ${clears} clears`;
-  paceEl.textContent = gameState === 'won' ? (lastRunMastered ? 'MASTERED' : 'LEVEL CLEAR') : `${Math.round((Math.min(runTime, level.duration) / level.duration) * 100)}%`;
+  paceEl.textContent = gameState === 'won' ? (lastRunMastered ? 'MASTERED' : 'LEVEL CLEAR') : `${Math.round((Math.min(runTime, level.duration) / level.duration) * 100)}% route`;
   goalTextEl.textContent = `Clear: ${level.clearGoal}`;
   hintTextEl.textContent = `${level.hint} Reward: ${level.rewardText}`;
   restartBtn.disabled = false;
@@ -432,7 +442,10 @@ function updateHud() {
   } else if (gameState === 'failed') {
     corruptEl.textContent = 'FAIL';
   } else if (activeCorruption) {
-    corruptEl.textContent = `HOT LANE ${activeCorruption.lane + 1}`;
+    const exposurePct = Math.round((corruptionExposure / CORRUPTION_MAX_EXPOSURE) * 100);
+    corruptEl.textContent = `HOT ${activeCorruption.lane + 1} · ${exposurePct}%`;
+  } else if (corruptionExposure > 0.04) {
+    corruptEl.textContent = `COOLING ${Math.round((corruptionExposure / CORRUPTION_MAX_EXPOSURE) * 100)}%`;
   } else {
     corruptEl.textContent = 'STABLE';
   }
@@ -446,6 +459,8 @@ function setIdleStateFromSelection() {
   currentLane = 1;
   hazards = [];
   runTime = 0;
+  score = 0;
+  corruptionExposure = 0;
   lastFrame = 0;
   touchStartX = null;
   nextSpawnIndex = 0;
@@ -482,13 +497,14 @@ function moveLane(delta) {
 }
 
 function spawnHazard(lane) {
+  const corrupted = isLaneCorrupted(lane);
   hazards.push({
     lane,
     y: -HAZARD_HEIGHT,
-    width: HAZARD_WIDTH,
+    width: HAZARD_WIDTH + (corrupted ? 8 : 0),
     height: HAZARD_HEIGHT,
-    speed: HAZARD_SPEED,
-    isCorrupted: isLaneCorrupted(lane),
+    speed: HAZARD_SPEED + (corrupted ? 56 : 0),
+    isCorrupted: corrupted,
   });
 }
 
@@ -535,6 +551,21 @@ function update(delta) {
   if (!level) return;
 
   runTime += delta;
+
+  const activeCorruption = getCorruptionWindow();
+  const onCorruptedLane = Boolean(activeCorruption && activeCorruption.lane === currentLane);
+  score += delta * (BASE_SCORE_PER_SECOND + (onCorruptedLane ? CORRUPTED_BONUS_PER_SECOND : 0));
+
+  if (onCorruptedLane) {
+    corruptionExposure += delta;
+  } else {
+    corruptionExposure = Math.max(0, corruptionExposure - delta * CORRUPTION_RECOVER_PER_SECOND);
+  }
+
+  if (corruptionExposure >= CORRUPTION_MAX_EXPOSURE) {
+    failRun('Stayed in the corrupted lane too long');
+    return;
+  }
 
   while (nextSpawnIndex < level.spawns.length && runTime >= level.spawns[nextSpawnIndex].spawnAt) {
     spawnHazard(level.spawns[nextSpawnIndex].lane);
@@ -592,12 +623,18 @@ function drawBackground() {
     ctx.fillRect(x, 0, laneWidth, HEIGHT);
 
     if (isLaneCorrupted(lane)) {
-      ctx.fillStyle = 'rgba(181, 79, 255, 0.22)';
+      const pulse = 0.45 + Math.sin(runTime * 9) * 0.15;
+      ctx.fillStyle = `rgba(181, 79, 255, ${0.18 + pulse * 0.18})`;
       ctx.fillRect(x, 0, laneWidth, HEIGHT);
 
-      ctx.strokeStyle = 'rgba(255, 150, 228, 0.75)';
+      ctx.strokeStyle = `rgba(255, 150, 228, ${0.64 + pulse * 0.22})`;
       ctx.lineWidth = 4;
       ctx.strokeRect(x + 6, 6, laneWidth - 12, HEIGHT - 12);
+
+      ctx.fillStyle = 'rgba(255, 219, 246, 0.92)';
+      ctx.font = 'bold 15px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('HOT', x + laneWidth / 2, 32);
     }
   }
 
@@ -670,7 +707,8 @@ function drawStatusText() {
     ctx.fillText(level.readyText, 18, HEIGHT - 54);
   } else if (activeCorruption) {
     ctx.fillStyle = '#ff9ccc';
-    ctx.fillText(`Lane ${activeCorruption.lane + 1} is corrupted`, 18, HEIGHT - 54);
+    const pct = Math.round((corruptionExposure / CORRUPTION_MAX_EXPOSURE) * 100);
+    ctx.fillText(`Lane ${activeCorruption.lane + 1} is corrupted, bonus score but overload at ${pct}%`, 18, HEIGHT - 54);
   } else if (gameState === 'won') {
     ctx.fillStyle = '#9af7c2';
     ctx.fillText(level.completeText, 18, HEIGHT - 54);
