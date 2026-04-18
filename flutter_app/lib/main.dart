@@ -29,7 +29,7 @@ class LaneSwitchApp extends StatelessWidget {
   }
 }
 
-enum RunState { ready, playing, won, failed }
+enum RunState { briefing, countdown, playing, won, failed }
 
 enum HazardKind { block, heavy, wide }
 
@@ -38,26 +38,27 @@ class SpawnEvent {
     required this.hitTime,
     required this.lanes,
     required this.kind,
+    this.note = '',
   });
 
   final double hitTime;
   final List<int> lanes;
   final HazardKind kind;
+  final String note;
 }
 
-class ActiveHazard {
-  ActiveHazard({
+class TimelineHazard {
+  const TimelineHazard({
+    required this.id,
     required this.lane,
     required this.kind,
-    required this.spawnTime,
     required this.hitTime,
   });
 
+  final int id;
   final int lane;
   final HazardKind kind;
-  final double spawnTime;
   final double hitTime;
-  bool countedClean = false;
 }
 
 class GamePage extends StatefulWidget {
@@ -70,55 +71,101 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage>
     with SingleTickerProviderStateMixin {
   static const int laneCount = 3;
-  static const double levelDuration = 42;
-  static const double spawnLeadTime = 1.45;
-  static const double grazeWindow = 0.22;
+  static const double levelDuration = 26;
+  static const double spawnLeadTime = 1.3;
+  static const double lingerAfterHit = 0.2;
+  static const double grazeWindow = 0.2;
+  static const double countdownDuration = 1.0;
 
-  late final Ticker _ticker;
-  Duration? _lastTick;
-
-  final List<SpawnEvent> _events = const [
-    SpawnEvent(hitTime: 2.4, lanes: [1], kind: HazardKind.block),
-    SpawnEvent(hitTime: 4.2, lanes: [0], kind: HazardKind.block),
-    SpawnEvent(hitTime: 5.9, lanes: [2], kind: HazardKind.heavy),
-    SpawnEvent(hitTime: 7.6, lanes: [1], kind: HazardKind.block),
-    SpawnEvent(hitTime: 9.1, lanes: [0, 1], kind: HazardKind.wide),
-    SpawnEvent(hitTime: 10.8, lanes: [2], kind: HazardKind.block),
-    SpawnEvent(hitTime: 12.6, lanes: [1], kind: HazardKind.heavy),
-    SpawnEvent(hitTime: 14.2, lanes: [1, 2], kind: HazardKind.wide),
-    SpawnEvent(hitTime: 16.0, lanes: [0], kind: HazardKind.block),
-    SpawnEvent(hitTime: 17.8, lanes: [2], kind: HazardKind.block),
-    SpawnEvent(hitTime: 19.1, lanes: [0, 2], kind: HazardKind.wide),
-    SpawnEvent(hitTime: 20.8, lanes: [1], kind: HazardKind.heavy),
-    SpawnEvent(hitTime: 22.3, lanes: [0], kind: HazardKind.block),
-    SpawnEvent(hitTime: 24.0, lanes: [2], kind: HazardKind.heavy),
-    SpawnEvent(hitTime: 25.7, lanes: [1], kind: HazardKind.block),
-    SpawnEvent(hitTime: 27.5, lanes: [0, 1], kind: HazardKind.wide),
-    SpawnEvent(hitTime: 29.2, lanes: [2], kind: HazardKind.block),
-    SpawnEvent(hitTime: 31.0, lanes: [0], kind: HazardKind.heavy),
-    SpawnEvent(hitTime: 32.7, lanes: [1, 2], kind: HazardKind.wide),
-    SpawnEvent(hitTime: 34.5, lanes: [0], kind: HazardKind.block),
-    SpawnEvent(hitTime: 36.0, lanes: [2], kind: HazardKind.block),
-    SpawnEvent(hitTime: 37.6, lanes: [1], kind: HazardKind.heavy),
-    SpawnEvent(hitTime: 39.2, lanes: [0, 2], kind: HazardKind.wide),
-    SpawnEvent(hitTime: 40.7, lanes: [1], kind: HazardKind.block),
+  static const List<SpawnEvent> _events = [
+    SpawnEvent(
+      hitTime: 6.2,
+      lanes: [1],
+      kind: HazardKind.block,
+      note: 'Warm-up read',
+    ),
+    SpawnEvent(
+      hitTime: 8.0,
+      lanes: [0],
+      kind: HazardKind.block,
+      note: 'Single switch',
+    ),
+    SpawnEvent(
+      hitTime: 9.8,
+      lanes: [2],
+      kind: HazardKind.block,
+      note: 'Return read',
+    ),
+    SpawnEvent(
+      hitTime: 11.7,
+      lanes: [1],
+      kind: HazardKind.heavy,
+      note: 'Hold center',
+    ),
+    SpawnEvent(
+      hitTime: 13.6,
+      lanes: [0, 1],
+      kind: HazardKind.wide,
+      note: 'Safe lane right',
+    ),
+    SpawnEvent(
+      hitTime: 15.3,
+      lanes: [2],
+      kind: HazardKind.block,
+      note: 'Reset to center',
+    ),
+    SpawnEvent(
+      hitTime: 17.1,
+      lanes: [1],
+      kind: HazardKind.block,
+      note: 'Clean weave',
+    ),
+    SpawnEvent(
+      hitTime: 18.8,
+      lanes: [1, 2],
+      kind: HazardKind.wide,
+      note: 'Safe lane left',
+    ),
+    SpawnEvent(
+      hitTime: 20.5,
+      lanes: [0],
+      kind: HazardKind.heavy,
+      note: 'Late dodge',
+    ),
+    SpawnEvent(
+      hitTime: 22.0,
+      lanes: [2],
+      kind: HazardKind.block,
+      note: 'Final check',
+    ),
+    SpawnEvent(
+      hitTime: 23.6,
+      lanes: [0, 2],
+      kind: HazardKind.wide,
+      note: 'Center finish',
+    ),
   ];
 
-  RunState _runState = RunState.ready;
-  final List<ActiveHazard> _hazards = [];
+  late final Ticker _ticker;
+  late final List<TimelineHazard> _timelineHazards;
+
+  Duration? _lastTick;
+  RunState _runState = RunState.briefing;
   int _playerLane = 1;
-  int _nextSpawnIndex = 0;
   double _runTime = 0;
+  double _countdownLeft = countdownDuration;
   int _cleanDodges = 0;
   int _closeCalls = 0;
-  String _statusText = 'Tap left or right side to launch and switch lanes.';
+  String _statusText = 'Read the briefing, then hit start.';
   double? _touchStartX;
+  final Set<int> _resolvedHazards = <int>{};
+  final Set<int> _collidedHazards = <int>{};
 
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker(_tick);
-    _ticker.start();
+    _timelineHazards = _buildHazards(_events);
+    _ticker = createTicker(_tick)..start();
   }
 
   @override
@@ -127,87 +174,123 @@ class _GamePageState extends State<GamePage>
     super.dispose();
   }
 
-  void _tick(Duration elapsed) {
-    final lastTick = _lastTick;
-    _lastTick = elapsed;
-    if (lastTick == null || !mounted || _runState != RunState.playing) {
-      if (mounted) setState(() {});
-      return;
-    }
-
-    final delta = (elapsed - lastTick).inMicroseconds / Duration.microsecondsPerSecond;
-    final clampedDelta = delta.clamp(0.0, 0.033);
-
-    setState(() {
-      _runTime += clampedDelta;
-      _spawnHazards();
-      _updateHazards();
-      _evaluateWin();
-    });
-  }
-
-  void _spawnHazards() {
-    while (_nextSpawnIndex < _events.length) {
-      final event = _events[_nextSpawnIndex];
-      if (_runTime < event.hitTime - spawnLeadTime) break;
-
+  List<TimelineHazard> _buildHazards(List<SpawnEvent> events) {
+    final hazards = <TimelineHazard>[];
+    var nextId = 0;
+    for (final event in events) {
       for (final lane in event.lanes) {
-        _hazards.add(
-          ActiveHazard(
+        hazards.add(
+          TimelineHazard(
+            id: nextId++,
             lane: lane,
             kind: event.kind,
-            spawnTime: event.hitTime - spawnLeadTime,
             hitTime: event.hitTime,
           ),
         );
       }
-      _nextSpawnIndex += 1;
     }
+    return hazards;
   }
 
-  void _updateHazards() {
-    for (final hazard in _hazards) {
-      final nearHit = (_runTime - hazard.hitTime).abs() <= grazeWindow;
-      if (nearHit && _playerLane == hazard.lane) {
+  void _tick(Duration elapsed) {
+    final lastTick = _lastTick;
+    _lastTick = elapsed;
+    if (lastTick == null || !mounted) {
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final delta =
+        ((elapsed - lastTick).inMicroseconds / Duration.microsecondsPerSecond)
+            .clamp(0.0, 0.033);
+
+    setState(() {
+      switch (_runState) {
+        case RunState.briefing:
+        case RunState.failed:
+        case RunState.won:
+          return;
+        case RunState.countdown:
+          _countdownLeft = math.max(0, _countdownLeft - delta);
+          if (_countdownLeft <= 0) {
+            _runState = RunState.playing;
+            _statusText = 'Go. Read the telegraph, keep the safe lane.';
+          }
+          return;
+        case RunState.playing:
+          _runTime += delta;
+          _resolveHazards();
+          _evaluateWin();
+          return;
+      }
+    });
+  }
+
+  List<TimelineHazard> _visibleHazards() {
+    return _timelineHazards
+        .where((hazard) {
+          final visibleFrom = hazard.hitTime - spawnLeadTime;
+          final visibleUntil = hazard.hitTime + lingerAfterHit;
+          return _runTime >= visibleFrom && _runTime <= visibleUntil;
+        })
+        .toList(growable: false);
+  }
+
+  void _resolveHazards() {
+    for (final hazard in _timelineHazards) {
+      if (_resolvedHazards.contains(hazard.id)) {
+        continue;
+      }
+
+      final distanceToHit = (_runTime - hazard.hitTime).abs();
+      if (distanceToHit <= grazeWindow && _playerLane == hazard.lane) {
+        _resolvedHazards.add(hazard.id);
+        _collidedHazards.add(hazard.id);
         _runState = RunState.failed;
-        _statusText = 'Hit on lane ${hazard.lane + 1}. Retry instantly.';
+        _statusText = 'You clipped lane ${hazard.lane + 1}. Retry is clean.';
         return;
       }
 
-      if (!hazard.countedClean && _runTime > hazard.hitTime + grazeWindow) {
-        hazard.countedClean = true;
+      if (_runTime > hazard.hitTime + grazeWindow) {
+        _resolvedHazards.add(hazard.id);
         if (_playerLane != hazard.lane) {
           _cleanDodges += 1;
-          if ((_runTime - hazard.hitTime) < 0.16) {
+          final margin = _runTime - hazard.hitTime;
+          if (margin < 0.12) {
             _closeCalls += 1;
           }
         }
       }
     }
-
-    _hazards.removeWhere((hazard) => _runTime > hazard.hitTime + 0.9);
   }
 
   void _evaluateWin() {
     if (_runState != RunState.playing) return;
-    if (_runTime >= levelDuration && _nextSpawnIndex >= _events.length && _hazards.isEmpty) {
+    if (_runTime >= levelDuration &&
+        _resolvedHazards.length == _timelineHazards.length &&
+        _collidedHazards.isEmpty) {
       _runState = RunState.won;
       _statusText = 'Level clear. ${_stars()} star run.';
     }
   }
 
-  void _startRunIfNeeded() {
-    if (_runState == RunState.ready) {
-      _runState = RunState.playing;
-      _statusText = 'Read early. Commit before the block reaches you.';
-    }
+  void _beginCountdown() {
+    _resetRun(showBriefing: false);
+    setState(() {
+      _runState = RunState.countdown;
+      _countdownLeft = countdownDuration;
+      _statusText = 'Ready...';
+    });
   }
 
   void _move(int delta) {
-    if (_runState == RunState.failed || _runState == RunState.won) return;
-    _startRunIfNeeded();
     if (_runState != RunState.playing) return;
-    _playerLane = (_playerLane + delta).clamp(0, laneCount - 1);
+    final nextLane = (_playerLane + delta).clamp(0, laneCount - 1);
+    if (nextLane == _playerLane) return;
+    setState(() {
+      _playerLane = nextLane;
+      _statusText = 'Lane ${_playerLane + 1}. Stay calm and read ahead.';
+    });
   }
 
   void _handleTap(TapDownDetails details, BoxConstraints constraints) {
@@ -216,31 +299,40 @@ class _GamePageState extends State<GamePage>
     _move(tapX < width / 2 ? -1 : 1);
   }
 
-  void _restart() {
+  void _resetRun({bool showBriefing = true}) {
+    _playerLane = 1;
+    _runTime = 0;
+    _countdownLeft = countdownDuration;
+    _cleanDodges = 0;
+    _closeCalls = 0;
+    _touchStartX = null;
+    _resolvedHazards.clear();
+    _collidedHazards.clear();
+    _lastTick = null;
+    if (showBriefing) {
+      _runState = RunState.briefing;
+      _statusText = 'Read the briefing, then hit start.';
+    }
+  }
+
+  void _showBriefing() {
     setState(() {
-      _runState = RunState.ready;
-      _playerLane = 1;
-      _nextSpawnIndex = 0;
-      _runTime = 0;
-      _cleanDodges = 0;
-      _closeCalls = 0;
-      _hazards.clear();
-      _touchStartX = null;
-      _statusText = 'Tap left or right side to launch and switch lanes.';
-      _lastTick = null;
+      _resetRun(showBriefing: true);
     });
   }
 
   int _stars() {
     if (_runState != RunState.won) return 0;
     if (_closeCalls == 0) return 3;
-    if (_closeCalls <= 3) return 2;
+    if (_closeCalls <= 2) return 2;
     return 1;
   }
 
   String _stateLabel() {
     switch (_runState) {
-      case RunState.ready:
+      case RunState.briefing:
+        return 'BRIEF';
+      case RunState.countdown:
         return 'READY';
       case RunState.playing:
         return 'LIVE';
@@ -251,8 +343,14 @@ class _GamePageState extends State<GamePage>
     }
   }
 
+  String _countdownText() {
+    if (_countdownLeft <= 0.18) return 'GO';
+    return 'START';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final visibleHazards = _visibleHazards();
     final remaining = math.max(0, levelDuration - _runTime);
     final progress = (_runTime / levelDuration).clamp(0.0, 1.0);
 
@@ -266,9 +364,15 @@ class _GamePageState extends State<GamePage>
                 children: [
                   _StatChip(label: 'State', value: _stateLabel()),
                   const SizedBox(width: 8),
-                  _StatChip(label: 'Time left', value: '${remaining.toStringAsFixed(1)}s'),
+                  _StatChip(
+                    label: 'Time left',
+                    value: '${remaining.toStringAsFixed(1)}s',
+                  ),
                   const SizedBox(width: 8),
-                  _StatChip(label: 'Clean', value: '$_cleanDodges/${_events.length}'),
+                  _StatChip(
+                    label: 'Clean',
+                    value: '$_cleanDodges/${_timelineHazards.length}',
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -282,8 +386,10 @@ class _GamePageState extends State<GamePage>
               ),
               const SizedBox(height: 10),
               Text(
-                'Single authored level. Three lanes, readable telegraphs, fast retry.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                'Short first level. Safe tutorial start, readable lanes, clean retries.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
               ),
               const SizedBox(height: 14),
               Expanded(
@@ -292,26 +398,43 @@ class _GamePageState extends State<GamePage>
                     return GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTapDown: (details) => _handleTap(details, constraints),
-                      onHorizontalDragStart: (details) => _touchStartX = details.localPosition.dx,
+                      onHorizontalDragStart: (details) =>
+                          _touchStartX = details.localPosition.dx,
                       onHorizontalDragUpdate: (details) {
                         final start = _touchStartX;
-                        if (start == null) return;
+                        if (start == null || _runState != RunState.playing) {
+                          return;
+                        }
                         final dx = details.localPosition.dx - start;
-                        if (dx.abs() > 24) {
+                        if (dx.abs() >= 28) {
                           _move(dx > 0 ? 1 : -1);
                           _touchStartX = details.localPosition.dx;
                         }
                       },
                       onHorizontalDragEnd: (_) => _touchStartX = null,
-                      child: CustomPaint(
-                        painter: GamePainter(
-                          playerLane: _playerLane,
-                          runState: _runState,
-                          hazards: List<ActiveHazard>.from(_hazards),
-                          runTime: _runTime,
-                          spawnLeadTime: spawnLeadTime,
-                        ),
-                        child: const SizedBox.expand(),
+                      onHorizontalDragCancel: () => _touchStartX = null,
+                      child: Stack(
+                        children: [
+                          CustomPaint(
+                            painter: GamePainter(
+                              playerLane: _playerLane,
+                              runState: _runState,
+                              hazards: visibleHazards,
+                              runTime: _runTime,
+                              spawnLeadTime: spawnLeadTime,
+                              countdownText: _countdownText(),
+                            ),
+                            child: const SizedBox.expand(),
+                          ),
+                          if (_runState == RunState.briefing)
+                            _BriefingCard(
+                              onStart: _beginCountdown,
+                              objective: 'Survive one short lane run.',
+                              reward: 'Unlock the next mobile test build.',
+                              controls:
+                                  'Tap left/right or swipe to switch one lane instantly.',
+                            ),
+                        ],
                       ),
                     );
                   },
@@ -337,31 +460,41 @@ class _GamePageState extends State<GamePage>
                     Text(
                       _runState == RunState.won
                           ? 'Mastery: ${_stars()} stars, $_closeCalls close calls.'
-                          : 'Hazards: light block, heavy block, and double-lane wall. Restart is instant.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                          : 'Hazards stay locked to the scroll path and clear off-screen right after they pass.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: FilledButton.tonal(
-                            onPressed: () => _move(-1),
+                            onPressed: _runState == RunState.playing
+                                ? () => _move(-1)
+                                : null,
                             child: const Text('Left'),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: FilledButton(
-                            onPressed: _restart,
+                            onPressed: _showBriefing,
                             child: Text(
-                              _runState == RunState.ready ? 'Restart' : 'Retry now',
+                              _runState == RunState.won
+                                  ? 'Play again'
+                                  : _runState == RunState.failed
+                                  ? 'Retry'
+                                  : 'Reset',
                             ),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: FilledButton.tonal(
-                            onPressed: () => _move(1),
+                            onPressed: _runState == RunState.playing
+                                ? () => _move(1)
+                                : null,
                             child: const Text('Right'),
                           ),
                         ),
@@ -373,6 +506,102 @@ class _GamePageState extends State<GamePage>
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BriefingCard extends StatelessWidget {
+  const _BriefingCard({
+    required this.onStart,
+    required this.objective,
+    required this.reward,
+    required this.controls,
+  });
+
+  final VoidCallback onStart;
+  final String objective;
+  final String reward;
+  final String controls;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Container(
+              margin: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10182A),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Level 1 briefing',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 12),
+                    _BriefingRow(label: 'Goal', value: objective),
+                    const SizedBox(height: 8),
+                    _BriefingRow(label: 'Reward', value: reward),
+                    const SizedBox(height: 8),
+                    _BriefingRow(label: 'Controls', value: controls),
+                    const SizedBox(height: 8),
+                    const _BriefingRow(
+                      label: 'Start signal',
+                      value: 'Press START, get a clear READY beat, then GO.',
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: onStart,
+                        child: const Text('START RUN'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BriefingRow extends StatelessWidget {
+  const _BriefingRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      text: TextSpan(
+        style: Theme.of(
+          context,
+        ).textTheme.bodyLarge?.copyWith(color: Colors.white),
+        children: [
+          TextSpan(
+            text: '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          TextSpan(text: value),
+        ],
       ),
     );
   }
@@ -397,7 +626,12 @@ class _StatChip extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.white60)),
+            Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: Colors.white60),
+            ),
             const SizedBox(height: 4),
             Text(value, style: Theme.of(context).textTheme.titleMedium),
           ],
@@ -414,13 +648,15 @@ class GamePainter extends CustomPainter {
     required this.hazards,
     required this.runTime,
     required this.spawnLeadTime,
+    required this.countdownText,
   });
 
   final int playerLane;
   final RunState runState;
-  final List<ActiveHazard> hazards;
+  final List<TimelineHazard> hazards;
   final double runTime;
   final double spawnLeadTime;
+  final String countdownText;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -440,9 +676,16 @@ class GamePainter extends CustomPainter {
     final playerY = size.height * 0.82;
 
     for (var lane = 0; lane < 3; lane++) {
-      final laneRect = Rect.fromLTWH(lane * laneWidth, 0, laneWidth, size.height);
+      final laneRect = Rect.fromLTWH(
+        lane * laneWidth,
+        0,
+        laneWidth,
+        size.height,
+      );
       final fill = Paint()
-        ..color = lane.isEven ? Colors.white.withValues(alpha: 0.035) : Colors.white.withValues(alpha: 0.065);
+        ..color = lane.isEven
+            ? Colors.white.withValues(alpha: 0.035)
+            : Colors.white.withValues(alpha: 0.065);
       canvas.drawRect(laneRect, fill);
     }
 
@@ -452,20 +695,26 @@ class GamePainter extends CustomPainter {
     for (var lane = 1; lane < 3; lane++) {
       final x = lane * laneWidth;
       for (double y = 0; y < size.height; y += 26) {
-        canvas.drawLine(Offset(x, y), Offset(x, math.min(y + 14, size.height)), laneDivider);
+        canvas.drawLine(
+          Offset(x, y),
+          Offset(x, math.min(y + 14, size.height)),
+          laneDivider,
+        );
       }
     }
 
     for (final hazard in hazards) {
       final laneLeft = hazard.lane * laneWidth;
-      final progress = ((runTime - hazard.spawnTime) / spawnLeadTime).clamp(0.0, 1.0);
-      final top = lerpDouble(-size.height * 0.14, playerY - _hazardHeight(hazard.kind) / 2, progress)!;
-      final hazardRect = Rect.fromLTWH(
-        laneLeft + laneWidth * 0.14,
-        top,
-        laneWidth * 0.72,
-        _hazardHeight(hazard.kind),
-      );
+      final travelProgress =
+          ((runTime - (hazard.hitTime - spawnLeadTime)) / spawnLeadTime).clamp(
+            0.0,
+            1.0,
+          );
+      final top = lerpDouble(
+        -_hazardHeight(hazard.kind) - 10,
+        playerY - _hazardHeight(hazard.kind) / 2,
+        Curves.easeIn.transform(travelProgress),
+      )!;
 
       final telegraphRect = Rect.fromLTWH(
         laneLeft + laneWidth * 0.12,
@@ -474,29 +723,45 @@ class GamePainter extends CustomPainter {
         18,
       );
       final telegraphPaint = Paint()
-        ..color = _hazardColor(hazard.kind).withValues(alpha: 0.28 + (0.45 * (1 - progress)));
+        ..color = _hazardColor(
+          hazard.kind,
+        ).withValues(alpha: 0.24 + (0.46 * (1 - travelProgress)));
       canvas.drawRRect(
         RRect.fromRectAndRadius(telegraphRect, const Radius.circular(10)),
         telegraphPaint,
       );
 
+      final hazardRect = Rect.fromLTWH(
+        laneLeft + laneWidth * 0.14,
+        top,
+        laneWidth * 0.72,
+        _hazardHeight(hazard.kind),
+      );
       final hazardPaint = Paint()..color = _hazardColor(hazard.kind);
       canvas.drawRRect(
         RRect.fromRectAndRadius(hazardRect, const Radius.circular(16)),
         hazardPaint,
       );
 
-      final shinePaint = Paint()..color = Colors.white.withValues(alpha: 0.28);
+      final shinePaint = Paint()..color = Colors.white.withValues(alpha: 0.22);
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(hazardRect.left + 8, hazardRect.top + 8, hazardRect.width - 16, 10),
+          Rect.fromLTWH(
+            hazardRect.left + 8,
+            hazardRect.top + 8,
+            hazardRect.width - 16,
+            10,
+          ),
           const Radius.circular(6),
         ),
         shinePaint,
       );
     }
 
-    final playerCenter = Offset(playerLane * laneWidth + laneWidth / 2, playerY);
+    final playerCenter = Offset(
+      playerLane * laneWidth + laneWidth / 2,
+      playerY,
+    );
     canvas.drawCircle(
       playerCenter,
       24,
@@ -508,12 +773,21 @@ class GamePainter extends CustomPainter {
       Paint()..color = Colors.white,
     );
 
-    if (runState == RunState.ready) {
-      _banner(canvas, size, 'Tap a side to start');
-    } else if (runState == RunState.failed) {
-      _banner(canvas, size, 'Fail • Retry now');
-    } else if (runState == RunState.won) {
-      _banner(canvas, size, 'Clear');
+    switch (runState) {
+      case RunState.briefing:
+        _banner(canvas, size, 'Read the briefing');
+        break;
+      case RunState.countdown:
+        _banner(canvas, size, countdownText);
+        break;
+      case RunState.failed:
+        _banner(canvas, size, 'Fail • Retry');
+        break;
+      case RunState.won:
+        _banner(canvas, size, 'Clear');
+        break;
+      case RunState.playing:
+        break;
     }
   }
 
@@ -522,9 +796,9 @@ class GamePainter extends CustomPainter {
       case HazardKind.block:
         return 54;
       case HazardKind.heavy:
-        return 74;
+        return 72;
       case HazardKind.wide:
-        return 62;
+        return 60;
     }
   }
 
@@ -544,11 +818,18 @@ class GamePainter extends CustomPainter {
       Rect.fromLTWH(18, 18, size.width - 36, 48),
       const Radius.circular(16),
     );
-    canvas.drawRRect(rect, Paint()..color = Colors.black.withValues(alpha: 0.55));
+    canvas.drawRRect(
+      rect,
+      Paint()..color = Colors.black.withValues(alpha: 0.55),
+    );
     final textPainter = TextPainter(
       text: TextSpan(
         text: text,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: size.width - 60);
@@ -560,6 +841,7 @@ class GamePainter extends CustomPainter {
     return oldDelegate.playerLane != playerLane ||
         oldDelegate.runState != runState ||
         oldDelegate.runTime != runTime ||
+        oldDelegate.countdownText != countdownText ||
         oldDelegate.hazards.length != hazards.length;
   }
 }
