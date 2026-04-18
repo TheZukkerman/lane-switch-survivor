@@ -2,6 +2,20 @@
 
 Flutter app for Lane Switch Survivor.
 
+## Preferred Android dev flow
+
+For emulator or USB-device work, prefer the Windows-side helper:
+
+- `../tools/windows/android-deploy/README.md`
+
+From a Windows checkout of this repo, the intended default command is:
+
+```powershell
+.\tools\windows\android-deploy\android-run.cmd
+```
+
+That avoids WSL USB/device weirdness and keeps `flutter`, emulator, and `adb` on the same side.
+
 ## Fast Android debug delivery
 
 If you just want the latest debug build on a phone, use:

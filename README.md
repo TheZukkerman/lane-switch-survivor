@@ -27,6 +27,24 @@ What is intentionally not in yet:
 
 ## Run on Android
 
+### Preferred path now, Windows-side deploy
+
+For the least fragile Android loop, run Flutter and `adb` from Windows, not from WSL.
+
+See:
+
+- `tools/windows/android-deploy/README.md`
+
+Quick start from a Windows checkout of this repo:
+
+```powershell
+.\tools\windows\android-deploy\android-run.cmd
+```
+
+That is the intended default path for emulator and phone testing going forward.
+
+### Direct Flutter run
+
 ```bash
 cd flutter_app
 flutter run
@@ -59,7 +77,9 @@ This is the intended fast loop for handing a new debug build to a phone without 
 
 ### Windows + WSL USB attach helper
 
-If Android deploys are driven from WSL but the phone is physically attached to Windows, use the narrow helper in:
+This is now the fallback path only.
+
+If Android deploys are still driven from WSL but the phone is physically attached to Windows, use the narrow helper in:
 
 - `tools/windows/android-usbipd/`
 
