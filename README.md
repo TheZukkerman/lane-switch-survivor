@@ -34,6 +34,29 @@ flutter run
 
 If a device is connected, Flutter will install and launch the build.
 
+## Fast phone install flow, no USB after setup
+
+Simplest repeatable path for Android testing:
+
+```bash
+cd flutter_app
+./share-android-debug.sh
+```
+
+What it does:
+- builds a fresh debug APK
+- copies it into a tiny local share folder
+- starts or reuses a local HTTP server
+- prints a phone-friendly URL on your LAN
+
+On the phone:
+- open the printed LAN URL on the same Wi-Fi
+- tap **Download APK**
+- allow installs from that browser the first time Android asks
+- install/update the app
+
+This is the intended fast loop for handing a new debug build to a phone without adb or a cable every time.
+
 ### Windows + WSL USB attach helper
 
 If Android deploys are driven from WSL but the phone is physically attached to Windows, use the narrow helper in:
@@ -44,7 +67,7 @@ It provides an Android-only `usbipd` attach flow, documented here:
 
 - `tools/windows/android-usbipd/README.md`
 
-### Build APK
+### Build APK manually
 
 ```bash
 cd flutter_app
@@ -55,6 +78,12 @@ APK output:
 
 ```bash
 flutter_app/build/app/outputs/flutter-apk/app-debug.apk
+```
+
+The share script above reuses this APK and serves it as:
+
+```bash
+flutter_app/.android-debug-share/public/lane-switch-survivor-debug.apk
 ```
 
 ## Controls
