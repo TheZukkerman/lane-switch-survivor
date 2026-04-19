@@ -143,7 +143,7 @@ switch ($Action) {
         Write-Host "adb.exe:         $($tooling.AdbPath)"
         Write-Host "emulator.exe:    $($tooling.EmulatorPath)"
         Write-Host "flutter.bat:     $($tooling.FlutterPath)"
-        $devices = Get-ConnectedDevices -AdbPath $tooling.AdbPath
+        $devices = @(Get-ConnectedDevices -AdbPath $tooling.AdbPath)
         if ($devices.Count -gt 0) {
             Write-Host "Connected:       $($devices -join ', ')"
         }
