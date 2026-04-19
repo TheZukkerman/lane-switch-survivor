@@ -29,11 +29,13 @@ The idea is simple:
    ```
 
    A real Windows checkout is the safest path for Flutter/Gradle speed and avoids weird WSL file edge cases.
-4. Open PowerShell in the repo and test:
+4. Open PowerShell in the repo root and test:
 
    ```powershell
    .\tools\windows\android-deploy\Invoke-AndroidDeploy.ps1 -Action doctor
    ```
+
+   The helper resolves the repo root automatically and, by default, expects the Flutter app at `flutter_app\` under that repo root.
 
 5. If you use a physical phone, enable Developer options and USB debugging once.
 6. If you use an emulator, create one AVD once in Android Studio Device Manager.

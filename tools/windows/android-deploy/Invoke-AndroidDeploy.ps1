@@ -53,7 +53,7 @@ function Get-ResolvedRepoRoot {
         return (Resolve-Path $ProvidedRoot).Path
     }
 
-    return (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+    return (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 }
 
 function Get-FlutterProjectRoot {
