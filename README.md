@@ -38,10 +38,30 @@ See:
 Quick start from a Windows checkout of this repo:
 
 ```powershell
+.\tools\windows\android-deploy\android-emulator-playtest.cmd
+```
+
+That is now the simplest default emulator flow. It starts or reuses an emulator, waits until Android is fully ready, builds and installs the app, launches it, and ends with a clear "now just look in the emulator" message.
+
+If you want the older attached Flutter loop instead:
+
+```powershell
 .\tools\windows\android-deploy\android-run.cmd
 ```
 
-That is the intended default path for emulator and phone testing going forward.
+### One-command emulator playtest on Windows
+
+```powershell
+.\tools\windows\android-deploy\android-emulator-playtest.cmd
+```
+
+Optional, for a named AVD:
+
+```powershell
+.\tools\windows\android-deploy\android-emulator-playtest.cmd -AvdName Pixel_8_API_35
+```
+
+This is the best handoff flow for "kika i emulatorn" testing.
 
 ### Direct Flutter run
 

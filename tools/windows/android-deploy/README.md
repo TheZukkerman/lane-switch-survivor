@@ -12,7 +12,9 @@ The idea is simple:
 
 - `Invoke-AndroidDeploy.ps1` - main helper
 - `Get-AndroidTooling.ps1` - resolves SDK / `adb` / emulator / Flutter paths
-- `android-run.cmd` - quick wrapper for `flutter run`
+- `android-emulator-playtest.cmd` - simplest emulator wrapper, start or reuse emulator, wait until ready, build, install, launch app
+- `android-playtest.cmd` - build, install, and launch on an already connected target
+- `android-run.cmd` - quick wrapper for attached `flutter run`
 - `android-install.cmd` - quick wrapper for `flutter build apk` + `adb install -r`
 
 ## One-time setup on Windows
@@ -42,9 +44,37 @@ The idea is simple:
 
 ## Normal repeat flow
 
-### Fastest: run straight from Windows
+### Best default for emulator testing
 
 From repo root:
+
+```powershell
+.\tools\windows\android-deploy\android-emulator-playtest.cmd
+```
+
+That flow:
+- starts the first available AVD, or reuses the running emulator
+- waits for `adb`, `wait-for-device`, and Android boot completion
+- builds a fresh APK
+- installs it
+- launches the app
+- ends with a clear line telling the operator to just look in the emulator and test
+
+Use a named AVD if needed:
+
+```powershell
+.\tools\windows\android-deploy\android-emulator-playtest.cmd -AvdName Pixel_8_API_35
+```
+
+### If a device is already online and you want the same install-and-launch playtest flow
+
+```powershell
+.\tools\windows\android-deploy\android-playtest.cmd
+```
+
+If more than one device is connected, pass `-DeviceId`.
+
+### If you want the older attached Flutter loop with hot reload
 
 ```powershell
 .\tools\windows\android-deploy\android-run.cmd
@@ -79,28 +109,28 @@ That does:
 ### Target a specific device or emulator
 
 ```powershell
-.\tools\windows\android-deploy\android-run.cmd -DeviceId emulator-5554
+.\tools\windows\android-deploy\android-emulator-playtest.cmd -DeviceId emulator-5554
 ```
 
 or:
 
 ```powershell
-.\tools\windows\android-deploy\android-install.cmd -DeviceId R5CX123456A
+.\tools\windows\android-deploy\android-playtest.cmd -DeviceId R5CX123456A
 ```
 
-### Start the first emulator automatically, then run
+### Start the first emulator automatically, then run attached Flutter
 
 ```powershell
 .\tools\windows\android-deploy\Invoke-AndroidDeploy.ps1 -Action run -StartEmulator
 ```
 
-### Start a named AVD
+### Start a named AVD in playtest mode
 
 ```powershell
-.\tools\windows\android-deploy\Invoke-AndroidDeploy.ps1 -Action run -StartEmulator -AvdName Pixel_8_API_35
+.\tools\windows\android-deploy\Invoke-AndroidDeploy.ps1 -Action playtest -StartEmulator -AvdName Pixel_8_API_35
 ```
 
-## Recommended future workflow
+## Recommended workflow going forward
 
 ### Once
 
@@ -108,31 +138,33 @@ or:
 - install Android Studio + Flutter on Windows
 - create one emulator or authorize one phone
 
-### Every test session after that
-
-Option A, emulator:
+### Every emulator test session after that
 
 1. Open PowerShell in the Windows checkout.
 2. Run:
 
    ```powershell
-   .\tools\windows\android-deploy\Invoke-AndroidDeploy.ps1 -Action run -StartEmulator
+   .\tools\windows\android-deploy\android-emulator-playtest.cmd
    ```
 
-Option B, physical phone:
+3. Wait for the green success block.
+4. Look in the emulator and test.
+
+### Every phone test session after that
 
 1. Plug in phone or connect it with normal Windows `adb` pairing if already set up.
 2. Run:
 
    ```powershell
-   .\tools\windows\android-deploy\android-run.cmd
+   .\tools\windows\android-deploy\android-playtest.cmd
    ```
 
-That is the intended default loop going forward. No `usbipd`, no WSL USB juggling, no hunting for `adb` in PATH each time.
+That is the intended low-friction loop going forward. No `usbipd`, no WSL USB juggling, no hunting for `adb` in PATH each time.
 
-## Notes
+## Notes and limits
 
 - `doctor` works even if `flutter.bat` is not in PATH, as long as `FLUTTER_ROOT` points to Flutter.
 - `adb.exe` is resolved from PATH first, then from `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`.
-- If both a phone and emulator are connected, pass `-DeviceId` to avoid Flutter picking the wrong target.
-- `-Action install` is good for clean install/update loops when hot reload is not needed.
+- If both a phone and emulator are connected, pass `-DeviceId` to avoid ambiguity.
+- The full emulator flow still assumes one-time Windows setup is already done: Android Studio, Flutter, and at least one AVD.
+- `android-emulator-playtest.cmd` launches the app and exits. If you want hot reload or an attached debug session, use `android-run.cmd` instead.
